@@ -18,6 +18,9 @@ dependencies = [
     "uvicorn[standard]>=0.44.0",
 ]
 
+[project.scripts]
+marsops-mcp = "marsops.mcp_server.server:main"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
