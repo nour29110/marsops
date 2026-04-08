@@ -72,7 +72,7 @@ class TelemetryBroadcaster:
         """
         for queue in list(self._subscribers):
             try:
-                await queue.put(event)
+                queue.put_nowait(event)
             except asyncio.QueueFull:
                 logger.warning("TelemetryBroadcaster: subscriber queue full, event dropped")
 
