@@ -1,0 +1,4 @@
+# file: /Users/mohamadnour/Downloads/marsops/.venv/bin/pytest
+# hypothesis_version: 6.151.11
+
+['-script.pyw', '.exe', '__main__']

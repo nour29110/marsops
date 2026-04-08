@@ -40,3 +40,4 @@ Thumbs.db
 # Data (raw downloads, not checked in)
 data/raw/
 
+.hypothesis/
