@@ -23,6 +23,8 @@ EventType = Literal[
     "mission_start",
     "mission_complete",
     "mission_failed",
+    "anomaly",
+    "recovery_replan",
 ]
 
 

@@ -1,0 +1,45 @@
+2026-04-08 14:57:38,848 [INFO] __main__: Loading synthetic Jezero DEM (5x downsample) ...
+2026-04-08 14:57:38,855 [INFO] marsops.terrain.loader: Loaded terrain: Jezero Crater DEM | shape=(500, 500) | elev=[-2706.4, -2518.5] m | res=57.7 m/px
+2026-04-08 14:57:38,856 [INFO] __main__: Terrain shape: (100, 100)  elev=[-2704.0, -2520.5] m  res=288.3 m/px
+2026-04-08 14:57:38,856 [INFO] __main__: Mission goal: Traverse to (22, 22) via two intermediate waypoints
+2026-04-08 14:57:38,856 [INFO] __main__: Running mission planner ...
+2026-04-08 14:57:38,856 [INFO] marsops.planner.mission_planner_runtime: Detected keywords: []
+2026-04-08 14:57:38,856 [INFO] marsops.planner.mission_planner_runtime: Candidate waypoints: 6 (from 6 sampled, 6 traversable)
+2026-04-08 14:57:38,859 [INFO] marsops.planner.mission_planner_runtime: Refinement iteration 1: feasible=True, reason=Plan feasible: battery=46.2% (min=15.0%), duration=64615.0 s
+2026-04-08 14:57:38,859 [INFO] __main__: 
+=== MissionPlan [FEASIBLE] ===
+Goal      : Traverse to (22, 22) via two intermediate waypoints
+Start     : (10, 10)
+Waypoints : [(13, 11), (13, 17)]
+Path cells: 9
+Duration  : 64615.0 s
+Battery   : 46.2% remaining
+Reasoning : Keywords matched: [none]. Candidates found: 6. Refinement iterations: 1. Final dry-run: battery=46.2%, duration=64615.0s.
+2026-04-08 14:57:38,859 [INFO] __main__: Plan feasible: 2 waypoints, 10 path cells, battery=46.2%
+2026-04-08 14:57:38,859 [INFO] __main__: Injecting 2 anomalies: ['dust_storm@step4', 'wheel_stuck@step7']
+2026-04-08 14:57:38,859 [INFO] __main__: === MISSION EXECUTION START ===
+2026-04-08 14:57:38,859 [WARNING] marsops.simulator.anomalies: Anomaly fired: type=dust_storm severity=0.60 pos=(13, 12) battery=64.3% drain_pct=9.0 idle_s=2160.0 blocked_cells=0
+2026-04-08 14:57:38,859 [WARNING] marsops.simulator.anomalies: Anomaly fired: type=wheel_stuck severity=0.80 pos=(13, 15) battery=47.1% drain_pct=0.0 idle_s=0.0 blocked_cells=3
+2026-04-08 14:57:38,859 [INFO] marsops.planner.mission_planner_runtime: Detected keywords: []
+2026-04-08 14:57:38,859 [INFO] marsops.planner.mission_planner_runtime: Candidate waypoints: 3 (from 3 sampled, 3 traversable)
+2026-04-08 14:57:38,862 [INFO] marsops.planner.mission_planner_runtime: Refinement iteration 1: feasible=True, reason=Plan feasible: battery=72.4% (min=15.0%), duration=33140.2 s
+2026-04-08 14:57:38,862 [INFO] marsops.planner.recovery: Recovery: replan_around — battery=47.1% blocked_cells=3 — replanned from (13, 15) keeping 1 waypoints (dropped blocked ones). New plan: battery=72.4%, duration=33140.2s.
+2026-04-08 14:57:38,862 [INFO] marsops.simulator.engine: Recovery strategy: replan_around at step 7 pos=(13, 15)
+2026-04-08 14:57:38,862 [INFO] marsops.simulator.engine: Mission complete (with recovery): 19 events, 86188.1 s, 19.5% battery remaining
+2026-04-08 14:57:38,862 [INFO] __main__: === MISSION EXECUTION END ===
+2026-04-08 14:57:38,862 [INFO] __main__: Total events       : 19
+2026-04-08 14:57:38,862 [INFO] __main__: Anomaly events     : 2
+2026-04-08 14:57:38,862 [INFO] __main__: Recovery replans   : 1
+2026-04-08 14:57:38,862 [INFO] __main__: Steps taken        : 11
+2026-04-08 14:57:38,862 [INFO] __main__: Waypoints reached  : 2
+2026-04-08 14:57:38,862 [INFO] __main__: Duration           : 86188.1 s
+2026-04-08 14:57:38,862 [INFO] __main__: Final battery      : 19.5%
+2026-04-08 14:57:38,862 [INFO] __main__: Mission outcome    : mission_complete
+2026-04-08 14:57:38,862 [INFO] __main__:   [anomaly] step=32457s  DUST STORM detected at step 4 — visibility < 1 m, solar panels partially obscured.
+2026-04-08 14:57:38,862 [INFO] __main__:   [anomaly] step=53048s  WHEEL STUCK at step 7 — right-front wheel jammed on embedded rock. Cells (16,16), (17,17), (18,18) flagged as blocked.
+2026-04-08 14:57:38,862 [INFO] __main__:   [recovery_replan] step=53048s  Recovery (replan_around): battery=47.1% blocked_cells=3 — replanned from (13, 15) keeping 1 waypoints (dropped blocked o
+2026-04-08 14:57:38,862 [INFO] marsops.telemetry.reporter: Mission report written to /Users/mohamadnour/Downloads/marsops/output/anomaly_mission_20260408_145738.md (19 events, outcome=success)
+2026-04-08 14:57:38,942 [INFO] marsops.viz.path_plot: Mission playback saved to /Users/mohamadnour/Downloads/marsops/output/anomaly_mission_20260408_145738.html
+2026-04-08 14:57:38,942 [INFO] __main__: Report  -> /Users/mohamadnour/Downloads/marsops/output/anomaly_mission_20260408_145738.md
+2026-04-08 14:57:38,942 [INFO] __main__: Playback -> /Users/mohamadnour/Downloads/marsops/output/anomaly_mission_20260408_145738.html
+2026-04-08 14:57:38,942 [INFO] __main__: Demo complete.
