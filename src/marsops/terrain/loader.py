@@ -2,20 +2,34 @@
 
 Provides the :class:`Terrain` wrapper around a 2-D NumPy elevation grid,
 the :class:`TerrainMetadata` Pydantic model, and a loader function that
-produces a Jezero-Crater-like DEM (synthetic, seeded for reproducibility).
+produces a Jezero-Crater-like DEM (synthetic, seeded for reproducibility),
+or downloads the real USGS CTX DEM when ``source="real"`` is requested.
 """
 
 from __future__ import annotations
 
 import logging
+import math
 from pathlib import Path
+from typing import Final, Literal
 
+import httpx
 import numpy as np
 import rasterio
 from pydantic import BaseModel
 from rasterio.transform import from_bounds
 
 logger = logging.getLogger(__name__)
+
+# Mars mean equatorial radius → metres per degree of arc
+_MARS_METERS_PER_DEGREE: Final[float] = math.pi * 3_389_500.0 / 180.0  # ≈ 59 274 m/°
+
+# Direct download URL for the USGS Astrogeology Mars 2020 CTX DTM mosaic
+# (9.3 MB GeoTIFF, no authentication required — verified 2026-04-07)
+_REAL_DEM_URL: Final[str] = (
+    "https://planetarymaps.usgs.gov/mosaic/mars2020_trn/CTX/"
+    "JEZ_ctx_B_soc_008_DTM_MOLAtopography_DeltaGeoid_20m_Eqc_latTs0_lon0.tif"
+)
 
 
 # ---------------------------------------------------------------------------
@@ -223,8 +237,22 @@ class Terrain:
 def _generate_synthetic_jezero(rows: int = 500, cols: int = 500) -> np.ndarray:
     """Generate a synthetic Jezero-like crater DEM.
 
-    Produces a 2-D float32 array with layered sinusoidal noise and a
-    crater-shaped depression in the centre.  Fully deterministic (seed 42).
+    Produces a 2-D float32 array with rolling-hill sinusoidal terrain, a
+    shallow central crater depression, and a delta-like ramp in the NW
+    quadrant.  Fully deterministic (seed 42).
+
+    The terrain is calibrated so that, after 5x downsampling, at least 85 %
+    of interior cells are traversable at the default 25° slope limit.
+
+    Design:
+        - Base elevation: -2600 m (Jezero crater floor).
+        - Large-scale: 2-D sinusoid, amplitude 40 m, wavelength ~150 cells.
+        - Medium-scale: 2-D sinusoid, amplitude 15 m, wavelength ~40 cells,
+          rotated 30° to break grid alignment.
+        - Small noise: ``default_rng(42).normal(0, 3, shape)``.
+        - Crater depression: Gaussian centred on the grid, amplitude 60 m,
+          sigma = 100 cells.
+        - NW delta ramp: bilinear 30 m gradient over the NW quadrant.
 
     Args:
         rows: Number of pixel rows.
@@ -236,82 +264,86 @@ def _generate_synthetic_jezero(rows: int = 500, cols: int = 500) -> np.ndarray:
     """
     rng = np.random.default_rng(42)
 
-    # Base elevation around -2500 m (typical Jezero floor)
-    y = np.linspace(0, 1, rows, dtype=np.float32)
-    x = np.linspace(0, 1, cols, dtype=np.float32)
-    xx, yy = np.meshgrid(x, y)
+    # Integer cell-index coordinate grids (float64 for precision during build)
+    row_idx = np.arange(rows, dtype=np.float64)
+    col_idx = np.arange(cols, dtype=np.float64)
+    cc, rr = np.meshgrid(col_idx, row_idx)
 
-    # Layered pseudo-noise (sum of sinusoids at different frequencies)
-    elevation = np.zeros((rows, cols), dtype=np.float32)
-    for freq in (2, 5, 11, 23):
-        phase_x = rng.uniform(0, 2 * np.pi)
-        phase_y = rng.uniform(0, 2 * np.pi)
-        amplitude = 80.0 / freq
-        elevation += (
-            amplitude
-            * np.sin(2 * np.pi * freq * xx + phase_x)
-            * np.cos(2 * np.pi * freq * yy + phase_y)
-        ).astype(np.float32)
+    # -- Large-scale rolling hills: amplitude 40 m, wavelength ~150 cells ----
+    phase_lr = float(rng.uniform(0.0, 2.0 * np.pi))
+    phase_lc = float(rng.uniform(0.0, 2.0 * np.pi))
+    large_scale: np.ndarray = (
+        40.0
+        * np.sin(2.0 * np.pi * rr / 150.0 + phase_lr)
+        * np.cos(2.0 * np.pi * cc / 150.0 + phase_lc)
+    )
 
-    # Crater bowl: radial Gaussian depression centred at (0.5, 0.5)
-    cx, cy = 0.5, 0.5
-    r2 = (xx - cx) ** 2 + (yy - cy) ** 2
-    crater_depth = 400.0  # metres
-    crater_radius = 0.3
-    bowl = -crater_depth * np.exp(-r2 / (2 * crater_radius**2))
-    elevation += bowl.astype(np.float32)
+    # -- Medium-scale: amplitude 15 m, wavelength ~40 cells, rotated 30° -----
+    theta = np.radians(30.0)
+    rr_rot: np.ndarray = rr * np.cos(theta) + cc * np.sin(theta)
+    cc_rot: np.ndarray = -rr * np.sin(theta) + cc * np.cos(theta)
+    phase_mr = float(rng.uniform(0.0, 2.0 * np.pi))
+    phase_mc = float(rng.uniform(0.0, 2.0 * np.pi))
+    medium_scale: np.ndarray = (
+        15.0
+        * np.sin(2.0 * np.pi * rr_rot / 40.0 + phase_mr)
+        * np.cos(2.0 * np.pi * cc_rot / 40.0 + phase_mc)
+    )
 
-    # Shift to realistic Mars elevation range
-    elevation += np.float32(-2500.0)
+    # -- Small-scale noise: std = 3 m (seeded rng) ---------------------------
+    noise: np.ndarray = rng.normal(0.0, 3.0, (rows, cols))
 
-    return elevation
+    # -- Shallow crater: Gaussian depression, amplitude 60 m, sigma = 100 cells --
+    cr: float = rows / 2.0
+    cc_ctr: float = cols / 2.0
+    r2: np.ndarray = (rr - cr) ** 2 + (cc - cc_ctr) ** 2
+    crater: np.ndarray = -60.0 * np.exp(-r2 / (2.0 * 100.0**2))
+
+    # -- NW delta ramp: bilinear 30 m gradient across the NW quadrant --------
+    # Evokes Jezero's river delta incised from the northwest.
+    ramp_r: np.ndarray = np.maximum(0.0, 1.0 - 2.0 * rr / rows)
+    ramp_c: np.ndarray = np.maximum(0.0, 1.0 - 2.0 * cc / cols)
+    ramp: np.ndarray = 30.0 * ramp_r * ramp_c
+
+    # -- Combine and shift to Jezero floor elevation -------------------------
+    elevation: np.ndarray = large_scale + medium_scale + noise + crater + ramp - 2600.0
+
+    return elevation.astype(np.float32)
 
 
 # ---------------------------------------------------------------------------
-# Loader
+# Loader helpers
 # ---------------------------------------------------------------------------
 
 _JEZERO_BOUNDS = (77.3, 18.1, 77.8, 18.6)  # lon/lat extent (approximate)
 
 
-def load_jezero_dem(data_dir: Path) -> Terrain:
-    """Load (or generate) a Jezero Crater DEM and return a :class:`Terrain`.
-
-    Looks for a cached GeoTIFF at ``data_dir / "raw" / "jezero_synthetic.tif"``.
-    If the file does not exist it is generated from deterministic synthetic
-    noise (seeded with 42) and saved for reuse.
-
-    Note:
-        A real HRSC or CTX DEM could be substituted by placing a GeoTIFF at
-        ``data_dir / "raw" / "jezero_hrsc.tif"``.  The loader will prefer it
-        when present.
+def _download_real_dem(dest: Path) -> None:
+    """Download the USGS Astrogeology CTX DTM mosaic (~9 MB) to *dest*.
 
     Args:
-        data_dir: Root data directory (typically the repo's ``data/`` folder).
+        dest: Local path to write the GeoTIFF.
 
-    Returns:
-        A :class:`Terrain` instance ready for path planning.
+    Raises:
+        RuntimeError: If the HTTP request fails or the file cannot be written.
+            Includes instructions for manual placement.
     """
-    raw_dir = data_dir / "raw"
-    raw_dir.mkdir(parents=True, exist_ok=True)
-
-    real_path = raw_dir / "jezero_hrsc.tif"
-    synth_path = raw_dir / "jezero_synthetic.tif"
-
-    if real_path.exists():
-        tif_path = real_path
-        source = str(real_path)
-    elif synth_path.exists():
-        tif_path = synth_path
-        source = "synthetic (cached)"
-    else:
-        logger.info("No cached DEM found — generating synthetic Jezero terrain")
-        elevation = _generate_synthetic_jezero()
-        _write_geotiff(synth_path, elevation, _JEZERO_BOUNDS)
-        tif_path = synth_path
-        source = "synthetic (generated)"
-
-    return _read_terrain(tif_path, source, name="Jezero Crater DEM")
+    logger.info("Downloading real Jezero DEM (~9 MB) from USGS Astrogeology …")
+    try:
+        with httpx.stream("GET", _REAL_DEM_URL, follow_redirects=True, timeout=120.0) as resp:
+            resp.raise_for_status()
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            with dest.open("wb") as fh:
+                for chunk in resp.iter_bytes(chunk_size=65_536):
+                    fh.write(chunk)
+    except httpx.HTTPError as exc:
+        msg = (
+            f"Failed to download real Jezero DEM: {exc!s}\n"
+            "Manually place a GeoTIFF at data/raw/jezero_real.tif "
+            "and re-run with source='real'."
+        )
+        raise RuntimeError(msg) from exc
+    logger.info("Saved real Jezero DEM to %s", dest)
 
 
 def _write_geotiff(
@@ -347,6 +379,10 @@ def _write_geotiff(
 def _read_terrain(tif_path: Path, source: str, name: str = "Terrain") -> Terrain:
     """Read a GeoTIFF and return a :class:`Terrain`.
 
+    For geographic CRS (EPSG:4326) the pixel size is converted from degrees
+    to metres using the Mars mean radius.  For projected CRS the pixel size
+    is used directly.
+
     Args:
         tif_path: Path to the GeoTIFF.
         source: Human-readable source description for metadata.
@@ -359,7 +395,14 @@ def _read_terrain(tif_path: Path, source: str, name: str = "Terrain") -> Terrain
         elevation = src.read(1).astype(np.float32)
         bounds_obj = src.bounds
         nodata = float(src.nodata) if src.nodata is not None else -9999.0
-        res_x = src.res[0]
+
+        if src.crs is not None and src.crs.is_geographic:
+            mean_lat_rad = math.radians((float(bounds_obj.bottom) + float(bounds_obj.top)) / 2.0)
+            res_lon_m = float(src.res[0]) * _MARS_METERS_PER_DEGREE * math.cos(mean_lat_rad)
+            res_lat_m = float(src.res[1]) * _MARS_METERS_PER_DEGREE
+            resolution_m = (res_lon_m + res_lat_m) / 2.0
+        else:
+            resolution_m = float(src.res[0])
 
     rows, cols = elevation.shape
     bounds = (
@@ -372,7 +415,7 @@ def _read_terrain(tif_path: Path, source: str, name: str = "Terrain") -> Terrain
     meta = TerrainMetadata(
         name=name,
         source_url=source,
-        resolution_m=float(res_x),
+        resolution_m=resolution_m,
         bounds=bounds,
         shape=(rows, cols),
         nodata_value=nodata,
@@ -380,7 +423,7 @@ def _read_terrain(tif_path: Path, source: str, name: str = "Terrain") -> Terrain
 
     terrain = Terrain(elevation=elevation, metadata=meta)
     logger.info(
-        "Loaded terrain: %s | shape=%s | elev=[%.1f, %.1f] m | res=%.4f m/px",
+        "Loaded terrain: %s | shape=%s | elev=[%.1f, %.1f] m | res=%.1f m/px",
         meta.name,
         terrain.shape,
         terrain.min_elevation,
@@ -388,6 +431,60 @@ def _read_terrain(tif_path: Path, source: str, name: str = "Terrain") -> Terrain
         meta.resolution_m,
     )
     return terrain
+
+
+# ---------------------------------------------------------------------------
+# Loader
+# ---------------------------------------------------------------------------
+
+
+def load_jezero_dem(
+    data_dir: Path,
+    *,
+    source: Literal["synthetic", "real"] = "synthetic",
+) -> Terrain:
+    """Load (or generate) a Jezero Crater DEM and return a :class:`Terrain`.
+
+    When *source* is ``"synthetic"`` (default), looks for a cached GeoTIFF at
+    ``data_dir / "raw" / "jezero_synthetic.tif"``.  If missing, a deterministic
+    synthetic terrain is generated (seed 42) and saved for reuse.
+
+    When *source* is ``"real"``, looks for ``data_dir / "raw" / "jezero_real.tif"``.
+    If missing, attempts to download the USGS Astrogeology Mars 2020 CTX DTM
+    (~9 MB, no authentication).  If the download fails, raises :exc:`RuntimeError`
+    with placement instructions — does **not** silently fall back to synthetic.
+
+    Args:
+        data_dir: Root data directory (typically the repo's ``data/`` folder).
+        source: Which DEM to load — ``"synthetic"`` (default) or ``"real"``.
+
+    Returns:
+        A :class:`Terrain` instance ready for path planning.
+
+    Raises:
+        RuntimeError: When ``source="real"`` and the DEM cannot be found or
+            downloaded.
+    """
+    raw_dir = data_dir / "raw"
+    raw_dir.mkdir(parents=True, exist_ok=True)
+
+    if source == "real":
+        real_path = raw_dir / "jezero_real.tif"
+        if not real_path.exists():
+            _download_real_dem(real_path)
+        return _read_terrain(real_path, str(real_path), name="Jezero Crater DEM (Real CTX)")
+
+    # source == "synthetic"
+    synth_path = raw_dir / "jezero_synthetic.tif"
+    if synth_path.exists():
+        tif_source = "synthetic (cached)"
+    else:
+        logger.info("No cached DEM found — generating synthetic Jezero terrain")
+        elevation = _generate_synthetic_jezero()
+        _write_geotiff(synth_path, elevation, _JEZERO_BOUNDS)
+        tif_source = "synthetic (generated)"
+
+    return _read_terrain(synth_path, tif_source, name="Jezero Crater DEM")
 
 
 # ---------------------------------------------------------------------------

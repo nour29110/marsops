@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import httpx
 import numpy as np
 import pytest
 from hypothesis import given, settings
@@ -397,10 +398,16 @@ class TestGenerateSyntheticJezero:
 
     def test_has_crater_depression(self) -> None:
         elev = _generate_synthetic_jezero()
-        centre = elev[240:260, 240:260].mean()
-        edge = elev[0:20, 0:20].mean()
-        # Centre should be lower (crater depression)
-        assert centre < edge
+        # The Gaussian crater (-60 m, sigma=100 cells) dominates near the centre.
+        # Compare a 50x50 window at the grid centre against the SE corner,
+        # which has neither the crater nor the NW delta ramp — so the crater
+        # signal (~-58 m) is not polluted by the ramp or sinusoid bias.
+        centre = float(elev[225:275, 225:275].mean())
+        southeast = float(elev[425:475, 425:475].mean())
+        assert centre < southeast, (
+            f"Crater centre mean ({centre:.1f} m) should be below SE corner "
+            f"mean ({southeast:.1f} m)"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -440,3 +447,25 @@ class TestLoadJezeroDem:
         assert 18.0 < min_lat < 19.0
         assert 77.0 < max_lon < 78.0
         assert 18.0 < max_lat < 19.0
+
+    def test_resolution_in_metres(self, tmp_path: Path) -> None:
+        # For a geographic CRS DEM, resolution_m should be in the tens-of-metres
+        # range for Jezero (~0.001° → ~57 m/pixel), not the degree-scale value.
+        terrain = load_jezero_dem(tmp_path)
+        assert 10.0 < terrain.metadata.resolution_m < 500.0
+
+    def test_explicit_synthetic_source(self, tmp_path: Path) -> None:
+        terrain = load_jezero_dem(tmp_path, source="synthetic")
+        assert terrain.shape == (500, 500)
+
+    def test_real_source_missing_raises(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """source='real' must raise RuntimeError when no local file and download fails."""
+
+        def _failing_stream(*args: object, **kwargs: object) -> None:
+            raise httpx.ConnectError("mocked network failure")
+
+        monkeypatch.setattr(httpx, "stream", _failing_stream)
+        with pytest.raises(RuntimeError, match=r"jezero_real\.tif"):
+            load_jezero_dem(tmp_path, source="real")
