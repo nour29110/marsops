@@ -1,0 +1,45 @@
+import { Canvas } from "@react-three/fiber";
+import { OrbitControls, Stars } from "@react-three/drei";
+import { Terrain } from "./Terrain";
+import { Rover } from "./Rover";
+import { PathLine } from "./PathLine";
+
+export function MarsScene() {
+  return (
+    <Canvas
+      className="w-full h-full"
+      camera={{ position: [40, 40, 40], fov: 50 }}
+      shadows
+    >
+      {/* Background */}
+      <color attach="background" args={["#1a0a05"]} />
+      <fog attach="fog" args={["#3a1e0e", 80, 300]} />
+
+      {/* Stars */}
+      <Stars radius={300} depth={50} count={2000} factor={4} fade />
+
+      {/* Lighting */}
+      <ambientLight intensity={0.3} />
+      <directionalLight
+        position={[50, 80, 30]}
+        intensity={1.2}
+        castShadow
+        shadow-mapSize={[2048, 2048]}
+      />
+      <hemisphereLight args={["#ff9966", "#3a1e0e", 0.4]} />
+
+      {/* Controls */}
+      <OrbitControls
+        enableDamping
+        minDistance={10}
+        maxDistance={200}
+        maxPolarAngle={Math.PI / 2.2}
+      />
+
+      {/* Scene objects */}
+      <Terrain />
+      <PathLine />
+      <Rover />
+    </Canvas>
+  );
+}

@@ -243,6 +243,12 @@ async def post_command(body: CommandRequest) -> CommandResponse:
     elif parsed.intent == "get_report":
         result = _get_last_mission_report()
 
+    elif parsed.intent == "reset_session":
+        from marsops.mcp_server.state import reset_session
+
+        reset_session()
+        result = {"status": "ok", "message": "Session reset"}
+
     # help / unknown: no dispatch — return parsed command only
 
     return CommandResponse(parsed=parsed, result=result)

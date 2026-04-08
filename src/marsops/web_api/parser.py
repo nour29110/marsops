@@ -19,6 +19,7 @@ Intent = Literal[
     "execute_mission",
     "inject_anomaly",
     "get_report",
+    "reset_session",
     "help",
     "unknown",
 ]
@@ -272,6 +273,10 @@ def parse_command(text: str) -> ParsedCommand:
     # --- report ---
     if _RE_REPORT.search(clean):
         return ParsedCommand(intent="get_report")
+
+    # --- reset session ---
+    if re.search(r"\b(reset|clear|new session|start over)\b", clean, re.IGNORECASE):
+        return ParsedCommand(intent="reset_session")
 
     # --- unknown ---
     return ParsedCommand(
