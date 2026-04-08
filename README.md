@@ -141,7 +141,7 @@ See [`docs/mcp_setup.md`](docs/mcp_setup.md) for the full setup. In short: start
 
 ## Project status
 
-Version 0.1.0. Feature-complete through closed-loop recovery and the Claude Desktop MCP integration. See [`docs/interview_talking_points.md`](docs/interview_talking_points.md) for a detailed walk through, and [`docs/anomaly_recovery_trace.txt`](docs/anomaly_recovery_trace.txt) for a real captured run.
+Version 0.1.0. Feature-complete through closed-loop recovery and the Claude Desktop MCP integration. See [`docs/anomaly_recovery_trace.txt`](docs/anomaly_recovery_trace.txt) for a real captured run.
 
 ## License
 
