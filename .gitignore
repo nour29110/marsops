@@ -41,3 +41,6 @@ Thumbs.db
 data/raw/
 
 .hypothesis/
+
+# Demo output
+output/
