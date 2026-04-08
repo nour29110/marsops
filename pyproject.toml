@@ -20,6 +20,7 @@ dependencies = [
 
 [project.scripts]
 marsops-mcp = "marsops.mcp_server.server:main"
+marsops-web = "marsops.web_api.app:run"
 
 [build-system]
 requires = ["hatchling"]
