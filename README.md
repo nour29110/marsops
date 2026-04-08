@@ -26,12 +26,6 @@ Claude Desktop calls six tools on a local MCP server you are running, loads a Di
 
 ---
 
-## Why this exists
-
-I wanted a portfolio project that would force me to actually use the modern agentic AI tooling that top teams like SpaceX, JPL, and Anthropic are adopting, not just call a chat API. So I built a Mars rover mission planner from scratch in Python, and then wired it up to Claude Code sub-agents and a custom MCP server the way those teams would.
-
-The result is a working closed-loop autonomous operations pipeline: terrain in, natural language goal in, validated plan out, simulated execution with mid-mission recovery, markdown sol report out. Everything runs locally, no paid APIs beyond the Claude Pro subscription used to develop it.
-
 ## Architecture at a glance
 
 See [`docs/architecture.md`](docs/architecture.md) for the full Mermaid diagram and module-by-module walk through.
