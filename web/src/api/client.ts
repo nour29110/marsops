@@ -17,12 +17,17 @@ export async function fetchTerrain(): Promise<TerrainData> {
 }
 
 export async function sendCommand(
-  text: string
+  text: string,
+  opts: { replaySpeedMs?: number } = {},
 ): Promise<{ parsed: unknown; result: MissionPlanResult | unknown }> {
+  const body: Record<string, unknown> = { text };
+  if (opts.replaySpeedMs !== undefined) {
+    body.replay_speed_ms = opts.replaySpeedMs;
+  }
   const res = await fetch(`${BASE_URL}/api/command`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text }),
+    body: JSON.stringify(body),
   });
   return handleResponse<{ parsed: unknown; result: MissionPlanResult | unknown }>(res);
 }

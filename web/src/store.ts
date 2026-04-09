@@ -10,6 +10,9 @@ interface AppState {
   roverHeading: number;
   batteryPct: number;
   missionStatus: "idle" | "running" | "complete" | "failed";
+  setRoverCell: (cell: [number, number]) => void;
+  cameraMode: "follow" | "free";
+  setCameraMode: (m: "follow" | "free") => void;
   applyTelemetry: (e: TelemetryEvent) => void;
   reset: () => void;
 }
@@ -23,6 +26,9 @@ export const useAppStore = create<AppState>((set) => ({
   roverHeading: 0,
   batteryPct: 100,
   missionStatus: "idle",
+  setRoverCell: (cell) => set({ roverCell: cell }),
+  cameraMode: "follow",
+  setCameraMode: (m) => set({ cameraMode: m }),
   applyTelemetry: (e) =>
     set((state) => {
       const patch: Partial<AppState> = {};

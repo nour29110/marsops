@@ -1,20 +1,28 @@
-import { useRef, useMemo } from "react";
+import { forwardRef, useImperativeHandle, useRef, useMemo, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import { useAppStore } from "../store";
 
-const ROVER_SCALE = 0.5;
+const ROVER_SCALE = 1.0;
 const HEIGHT_SCALE = 8;
-const Y_OFFSET = 0.3;
+const Y_OFFSET = 1.5;
 
-export function Rover() {
+export const Rover = forwardRef<THREE.Group>(function Rover(_, fwdRef) {
   const terrain = useAppStore((s) => s.terrain);
   const roverCell = useAppStore((s) => s.roverCell);
   const roverHeading = useAppStore((s) => s.roverHeading);
+  const path = useAppStore((s) => s.path);
 
   const { scene } = useGLTF("/models/curiosity.glb");
+
+  // Internal ref used by useFrame; fwdRef exposes the same element externally
   const groupRef = useRef<THREE.Group>(null);
+  useImperativeHandle(fwdRef, () => groupRef.current!);
+
+  // Smooth visual position / heading — updated every frame, decoupled from store events
+  const visualPosRef = useRef(new THREE.Vector3());
+  const visualHeadingRef = useRef(0);
 
   // Precompute terrain height lookup
   const elevData = useMemo(() => {
@@ -36,6 +44,7 @@ export function Rover() {
     return { elev, rows, cols, minE, range };
   }, [terrain]);
 
+  // Discrete target derived from store state
   const target = useMemo(() => {
     if (!terrain || !roverCell || !elevData) return null;
     const [row, col] = roverCell;
@@ -43,32 +52,40 @@ export function Rover() {
     const clampedRow = Math.max(0, Math.min(row, rows - 1));
     const clampedCol = Math.max(0, Math.min(col, cols - 1));
     const normalizedH = ((elev[clampedRow][clampedCol] - minE) / range) * HEIGHT_SCALE;
-    return new THREE.Vector3(
-      col - cols / 2,
-      normalizedH + Y_OFFSET,
-      row - rows / 2
-    );
+    return new THREE.Vector3(col - cols / 2, normalizedH + Y_OFFSET, row - rows / 2);
   }, [terrain, roverCell, elevData]);
 
-  useFrame(() => {
+  // Snap visual position to start of new mission when path changes
+  useEffect(() => {
+    if (target) {
+      visualPosRef.current.copy(target);
+    }
+  }, [path]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useFrame((_, delta) => {
     if (!groupRef.current || !target) return;
-    groupRef.current.position.lerp(target, 0.1);
+
+    // Snap on first placement, otherwise lerp smoothly (frame-rate-independent)
+    if (visualPosRef.current.distanceTo(target) > 30) {
+      visualPosRef.current.copy(target);
+    } else {
+      visualPosRef.current.lerp(target, Math.min(delta * 1.5, 1));
+    }
+    groupRef.current.position.copy(visualPosRef.current);
+
     const targetY = (Math.PI / 180) * roverHeading + Math.PI;
-    groupRef.current.rotation.y +=
-      (targetY - groupRef.current.rotation.y) * 0.1;
+    visualHeadingRef.current +=
+      (targetY - visualHeadingRef.current) * Math.min(delta * 4.0, 1);
+    groupRef.current.rotation.y = visualHeadingRef.current;
   });
 
   if (!terrain || !roverCell) return null;
 
-  const initialPos = target ?? new THREE.Vector3(0, 0, 0);
-
   return (
-    <group
-      ref={groupRef}
-      position={[initialPos.x, initialPos.y, initialPos.z]}
-      scale={[ROVER_SCALE, ROVER_SCALE, ROVER_SCALE]}
-    >
+    <group ref={groupRef} scale={[ROVER_SCALE, ROVER_SCALE, ROVER_SCALE]}>
+      {/* Cyan glow light attached to rover */}
+      <pointLight color="#00e5ff" intensity={0.6} distance={8} decay={2} />
       <primitive object={scene.clone()} />
     </group>
   );
-}
+});

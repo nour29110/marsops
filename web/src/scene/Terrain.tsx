@@ -4,20 +4,33 @@ import { useAppStore } from "../store";
 
 const HEIGHT_SCALE = 8;
 
+// Elevation colour stops (normalized 0-1)
+const COLOR_LOW = new THREE.Color("#4a1e0e");
+const COLOR_MID = new THREE.Color("#b8562f");
+const COLOR_HIGH = new THREE.Color("#d89b6a");
+
+function elevColor(t: number): THREE.Color {
+  if (t < 0.3) {
+    return COLOR_LOW.clone().lerp(COLOR_MID, t / 0.3);
+  } else if (t < 0.7) {
+    return COLOR_MID.clone().lerp(COLOR_HIGH, (t - 0.3) / 0.4);
+  }
+  return COLOR_MID.clone().lerp(COLOR_HIGH, (t - 0.3) / 0.4);
+}
+
 export function Terrain() {
   const terrain = useAppStore((s) => s.terrain);
 
-  const { geometry, wireGeometry } = useMemo(() => {
-    if (!terrain) return { geometry: null, wireGeometry: null };
+  const geometry = useMemo(() => {
+    if (!terrain) return null;
 
     const elev = terrain.elevation;
     // Use actual elevation dimensions — backend may downsample so terrain.shape
     // can be larger than elev.length / elev[0].length.
     const rows = elev.length;
     const cols = elev[0]?.length ?? 0;
-    if (rows === 0 || cols === 0) return { geometry: null, wireGeometry: null };
+    if (rows === 0 || cols === 0) return null;
 
-    // Flatten elevation and compute min/max for normalization
     let minE = Infinity;
     let maxE = -Infinity;
     for (let r = 0; r < rows; r++) {
@@ -30,19 +43,27 @@ export function Terrain() {
     const range = maxE - minE || 1;
 
     const positions = new Float32Array(rows * cols * 3);
+    const colors = new Float32Array(rows * cols * 3);
     const indices: number[] = [];
 
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
         const idx = r * cols + c;
-        const normalizedH = ((elev[r][c] - minE) / range) * HEIGHT_SCALE;
+        const raw = elev[r][c];
+        const t = (raw - minE) / range;
+        const normalizedH = t * HEIGHT_SCALE;
+
         positions[idx * 3] = c - cols / 2;
         positions[idx * 3 + 1] = normalizedH;
         positions[idx * 3 + 2] = r - rows / 2;
+
+        const col = elevColor(t);
+        colors[idx * 3] = col.r;
+        colors[idx * 3 + 1] = col.g;
+        colors[idx * 3 + 2] = col.b;
       }
     }
 
-    // Build triangle indices
     for (let r = 0; r < rows - 1; r++) {
       for (let c = 0; c < cols - 1; c++) {
         const a = r * cols + c;
@@ -56,29 +77,29 @@ export function Terrain() {
 
     const geo = new THREE.BufferGeometry();
     geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    geo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
     geo.setIndex(indices);
     geo.computeVertexNormals();
-
-    // Wireframe geometry
-    const wireGeo = new THREE.WireframeGeometry(geo);
-
-    return { geometry: geo, wireGeometry: wireGeo };
+    return geo;
   }, [terrain]);
 
-  if (!terrain || !geometry || !wireGeometry) return null;
+  if (!terrain || !geometry) return null;
 
   return (
     <group>
+      {/* Ground disc so the terrain doesn't float */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.1, 0]}>
+        <circleGeometry args={[200, 64]} />
+        <meshStandardMaterial color="#2a0e04" roughness={1} metalness={0} />
+      </mesh>
+
       <mesh geometry={geometry} receiveShadow castShadow>
         <meshStandardMaterial
-          color="#b8562f"
-          roughness={0.9}
-          metalness={0.05}
+          vertexColors
+          roughness={0.95}
+          metalness={0}
         />
       </mesh>
-      <lineSegments geometry={wireGeometry}>
-        <lineBasicMaterial color="#7a3820" transparent opacity={0.3} />
-      </lineSegments>
     </group>
   );
 }

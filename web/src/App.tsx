@@ -22,6 +22,8 @@ export default function App() {
   const batteryPct = useAppStore((s) => s.batteryPct);
   const roverHeading = useAppStore((s) => s.roverHeading);
   const missionStatus = useAppStore((s) => s.missionStatus);
+  const cameraMode = useAppStore((s) => s.cameraMode);
+  const setCameraMode = useAppStore((s) => s.setCameraMode);
 
   const [loading, setLoading] = useState(false);
 
@@ -47,29 +49,31 @@ export default function App() {
     }
   }
 
-  async function handlePlanAndRun() {
+  async function handleRunDemo() {
     setLoading(true);
-    getState().reset();                     // clear frontend state
+    getState().reset();
     try {
-      await sendCommand("reset session");   // clear backend session
+      await sendCommand("reset session");
       await sendCommand("load synthetic terrain");
       const terrainData = await fetchTerrain();
       getState().setTerrain(terrainData);
 
       const planResponse = await sendCommand(
-        "plan a mission from (10,10) with 2 waypoints in the NW quadrant"
+        "plan a mission from (10,10) with 2 waypoints in the NW quadrant",
       );
       const result = (
         planResponse as { parsed: unknown; result: MissionPlanResult }
       ).result as MissionPlanResult;
       const start: [number, number] = [10, 10];
       const wps: [number, number][] = result?.waypoints ?? [];
-      getState().setPath([start, ...wps]);
+      const path: [number, number][] = [start, ...wps];
+      getState().setPath(path);
+      getState().setRoverCell(path[0]); // pre-position rover at path start
 
       await sendCommand("inject a dust storm at step 3");
-      await sendCommand("execute mission");
+      await sendCommand("execute mission", { replaySpeedMs: 800 });
     } catch (err) {
-      console.error("Plan & Run error:", err);
+      console.error("Demo error:", err);
     } finally {
       setLoading(false);
     }
@@ -127,8 +131,17 @@ export default function App() {
         )}
       </div>
 
-      {/* Top-right: control buttons */}
+      {/* Top-right: 3 buttons */}
       <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
+        <button
+          onClick={() => setCameraMode(cameraMode === "follow" ? "free" : "follow")}
+          className="px-4 py-2 text-sm rounded bg-zinc-700 hover:bg-zinc-600 text-white font-medium transition-colors"
+        >
+          {cameraMode === "follow" ? "📷 Free Cam" : "🎯 Follow Cam"}
+        </button>
+
+        <div className="border-t border-white/10 my-0.5" />
+
         <button
           onClick={handleLoadTerrain}
           disabled={loading}
@@ -136,15 +149,15 @@ export default function App() {
         >
           {loading ? "Loading…" : "Load Terrain"}
         </button>
+
         <button
-          onClick={handlePlanAndRun}
+          onClick={handleRunDemo}
           disabled={loading}
           className="px-4 py-2 text-sm rounded bg-blue-700 hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium transition-colors"
         >
-          {loading ? "Running…" : "Plan & Run Demo"}
+          {loading ? "Running…" : "🪐 Run Demo Mission"}
         </button>
       </div>
-
     </div>
   );
 }
