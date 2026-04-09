@@ -228,9 +228,8 @@ def test_plan_mission_all_nodata_returns_mission_plan() -> None:
 def test_plan_mission_infeasible_rover_returns_plan() -> None:
     """plan_mission with an energy-hungry rover always returns a MissionPlan (never raises).
 
-    NOTE: The refinement loop drops waypoints until none remain; the final
-    trivial dry-run (empty waypoints → 100 % battery) is deemed feasible by
-    the source code.  The key contract being tested is "never raises".
+    NOTE: The refinement loop drops waypoints until none remain.  A plan with
+    no real waypoints is returned as feasible=False.
     """
     terrain = _flat_terrain(20, 20)
     bad_config = RoverConfig(battery_capacity_wh=1.0, drive_draw_w=100_000.0)
@@ -243,8 +242,9 @@ def test_plan_mission_infeasible_rover_returns_plan() -> None:
 
     # The planner must always return a MissionPlan — never raise.
     assert isinstance(result, MissionPlan)
-    # Reasoning must reference the refinement loop that was run.
-    assert "Refinement iterations" in result.reasoning
+    # A plan with all waypoints dropped is not feasible.
+    assert result.feasible is False
+    assert "dropped during refinement" in result.reasoning
 
 
 def test_plan_mission_flat_keyword_selects_low_slope_waypoints() -> None:
@@ -333,7 +333,7 @@ def test_plan_mission_infeasible_runs_up_to_max_iterations() -> None:
     The refinement loop drops the farthest waypoint each iteration.  With
     min_waypoints=3 and a rover that exhausts battery on any real path, the
     planner iterates, drops waypoints, and ultimately produces a plan with
-    fewer waypoints than requested.  The function never raises.
+    no real waypoints — returned as infeasible.
     """
     terrain = _flat_terrain(20, 20)
     bad_config = RoverConfig(battery_capacity_wh=1.0, drive_draw_w=100_000.0)
@@ -345,17 +345,9 @@ def test_plan_mission_infeasible_runs_up_to_max_iterations() -> None:
     result = plan_mission(terrain, goal, rover_config=bad_config)
 
     assert isinstance(result, MissionPlan)
-    # Reasoning must document that refinement iterations occurred.
-    assert "Refinement iterations" in result.reasoning
-    # The planner ran multiple iterations (started with 3 waypoints, dropped some).
-    # Extract iteration count from reasoning string: "Refinement iterations: N."
-    import re
-
-    match = re.search(r"Refinement iterations: (\d+)", result.reasoning)
-    assert match is not None
-    iterations_run = int(match.group(1))
-    # With 3 waypoints all failing, at least 2 iterations should have run.
-    assert iterations_run >= 2
+    # All waypoints were dropped — plan is infeasible.
+    assert result.feasible is False
+    assert "dropped during refinement" in result.reasoning
 
 
 def test_plan_mission_goal_preserved_in_plan() -> None:

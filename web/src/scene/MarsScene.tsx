@@ -6,20 +6,21 @@ import { Terrain } from "./Terrain";
 import { Rover } from "./Rover";
 import { PathLine } from "./PathLine";
 import { FollowCamera } from "./FollowCamera";
+import { DustStorm } from "./DustStorm";
 import { useAppStore } from "../store";
 
 export function MarsScene() {
   const cameraMode = useAppStore((s) => s.cameraMode);
 
   // Shared ref: Rover writes its real interpolated position here every frame;
-  // FollowCamera reads from it so the camera tracks smooth motion, not cell snaps.
+  // FollowCamera and DustStorm read from it so they track smooth motion, not cell snaps.
   const roverRef = useRef<Group>(null);
 
   return (
     <Canvas
       className="w-full h-full"
       camera={{ position: [40, 40, 40], fov: 50 }}
-      shadows
+      shadows={false}
     >
       {/* Background */}
       <color attach="background" args={["#1a0a05"]} />
@@ -33,8 +34,6 @@ export function MarsScene() {
       <directionalLight
         position={[50, 80, 30]}
         intensity={1.2}
-        castShadow
-        shadow-mapSize={[2048, 2048]}
       />
       <hemisphereLight args={["#ff9966", "#3a1e0e", 0.4]} />
 
@@ -53,6 +52,7 @@ export function MarsScene() {
       <Terrain />
       <PathLine />
       <Rover ref={roverRef} />
+      <DustStorm roverRef={roverRef} />
     </Canvas>
   );
 }

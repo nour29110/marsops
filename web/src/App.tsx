@@ -1,12 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { MarsScene } from "./scene/MarsScene";
-import { fetchTerrain, sendCommand } from "./api/client";
+import { MissionControls } from "./ui/MissionControls";
+import { EventLog } from "./ui/EventLog";
+import { AnomalyBanner } from "./ui/AnomalyBanner";
+import { TerrainMinimap } from "./ui/TerrainMinimap";
+import { sendCommand, fetchTerrain, fetchTraversableMask } from "./api/client";
 import { useTelemetrySocket } from "./api/websocket";
 import { useAppStore } from "./store";
-import type { MissionPlanResult } from "./types";
-
-// Access store outside React to avoid stale closure captures in async handlers
-const { getState } = useAppStore;
+import { ErrorBoundary } from "./debug/ErrorBoundary";
+import { DebugOverlay } from "./debug/DebugOverlay";
 
 const STATUS_COLORS: Record<string, string> = {
   idle: "text-gray-400",
@@ -17,76 +19,62 @@ const STATUS_COLORS: Record<string, string> = {
 
 export default function App() {
   const terrain = useAppStore((s) => s.terrain);
-  const setTerrain = useAppStore((s) => s.setTerrain);
+  const customStart = useAppStore((s) => s.customStart);
+  const setCustomStart = useAppStore((s) => s.setCustomStart);
   const roverCell = useAppStore((s) => s.roverCell);
   const batteryPct = useAppStore((s) => s.batteryPct);
   const roverHeading = useAppStore((s) => s.roverHeading);
   const missionStatus = useAppStore((s) => s.missionStatus);
-  const cameraMode = useAppStore((s) => s.cameraMode);
-  const setCameraMode = useAppStore((s) => s.setCameraMode);
-
-  const [loading, setLoading] = useState(false);
 
   useTelemetrySocket();
 
-  // Attempt to fetch terrain on mount — silently ignore 404/network errors
+  // Proactively initialize terrain on mount
   useEffect(() => {
-    fetchTerrain()
-      .then(setTerrain)
-      .catch(() => { /* no terrain loaded yet, ignore */ });
+    let cancelled = false;
+    (async () => {
+      try {
+        await sendCommand("load synthetic terrain");
+        if (cancelled) return;
+        const terrain = await fetchTerrain();
+        if (cancelled) return;
+        useAppStore.getState().setTerrain(terrain);
+        try {
+          const m = await fetchTraversableMask();
+          if (!cancelled) {
+            useAppStore.getState().setTraversableMask(m.mask);
+          }
+        } catch {
+          /* mask is optional */
+        }
+      } catch (err) {
+        console.error("Initial terrain load failed:", err);
+      }
+    })();
+    return () => { cancelled = true; };
   }, []);
 
-  async function handleLoadTerrain() {
-    setLoading(true);
-    try {
-      await sendCommand("load synthetic terrain");
-      const data = await fetchTerrain();
-      getState().setTerrain(data);
-    } catch (err) {
-      console.error("Load terrain error:", err);
-    } finally {
-      setLoading(false);
+  // Keyboard shortcut: Cmd/Ctrl+` toggles the debug overlay
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "`") {
+        e.preventDefault();
+        useAppStore.getState().toggleDebug();
+      }
     }
-  }
-
-  async function handleRunDemo() {
-    setLoading(true);
-    getState().reset();
-    try {
-      await sendCommand("reset session");
-      await sendCommand("load synthetic terrain");
-      const terrainData = await fetchTerrain();
-      getState().setTerrain(terrainData);
-
-      const planResponse = await sendCommand(
-        "plan a mission from (10,10) with 2 waypoints in the NW quadrant",
-      );
-      const result = (
-        planResponse as { parsed: unknown; result: MissionPlanResult }
-      ).result as MissionPlanResult;
-      const start: [number, number] = [10, 10];
-      const wps: [number, number][] = result?.waypoints ?? [];
-      const path: [number, number][] = [start, ...wps];
-      getState().setPath(path);
-      getState().setRoverCell(path[0]); // pre-position rover at path start
-
-      await sendCommand("inject a dust storm at step 3");
-      await sendCommand("execute mission", { replaySpeedMs: 800 });
-    } catch (err) {
-      console.error("Demo error:", err);
-    } finally {
-      setLoading(false);
-    }
-  }
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, []);
 
   return (
     <div className="relative w-screen h-screen overflow-hidden">
-      {/* 3D Canvas */}
+      {/* 3D Canvas — full screen */}
       <div className="absolute inset-0">
-        <MarsScene />
+        <ErrorBoundary>
+          <MarsScene />
+        </ErrorBoundary>
       </div>
 
-      {/* Top-left overlay: telemetry HUD */}
+      {/* Top-left: Telemetry HUD */}
       <div className="absolute top-4 left-4 z-10 bg-black/60 backdrop-blur-sm border border-white/10 rounded-lg p-3 text-sm space-y-1 min-w-[200px]">
         <div className="text-orange-400 font-semibold text-xs uppercase tracking-wider mb-2">
           MarsOps Telemetry
@@ -131,33 +119,37 @@ export default function App() {
         )}
       </div>
 
-      {/* Top-right: 3 buttons */}
-      <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
-        <button
-          onClick={() => setCameraMode(cameraMode === "follow" ? "free" : "follow")}
-          className="px-4 py-2 text-sm rounded bg-zinc-700 hover:bg-zinc-600 text-white font-medium transition-colors"
-        >
-          {cameraMode === "follow" ? "📷 Free Cam" : "🎯 Follow Cam"}
-        </button>
-
-        <div className="border-t border-white/10 my-0.5" />
-
-        <button
-          onClick={handleLoadTerrain}
-          disabled={loading}
-          className="px-4 py-2 text-sm rounded bg-orange-700 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium transition-colors"
-        >
-          {loading ? "Loading…" : "Load Terrain"}
-        </button>
-
-        <button
-          onClick={handleRunDemo}
-          disabled={loading}
-          className="px-4 py-2 text-sm rounded bg-blue-700 hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium transition-colors"
-        >
-          {loading ? "Running…" : "🪐 Run Demo Mission"}
-        </button>
+      {/* Top-right: Mission Control + Event Log stacked */}
+      <div className="absolute top-4 right-4 z-10 flex flex-col gap-3 items-end">
+        <ErrorBoundary>
+          <MissionControls />
+        </ErrorBoundary>
+        <EventLog />
       </div>
+
+      {/* Bottom-left: Terrain minimap for picking a custom start cell */}
+      {terrain && (
+        <div className="absolute bottom-4 left-4 z-10 bg-black/40 backdrop-blur-sm border border-white/10 rounded-lg p-2">
+          <div className="text-[10px] text-orange-400 uppercase tracking-wider mb-1 px-1">
+            Click to set start
+          </div>
+          <TerrainMinimap />
+          {customStart && (
+            <button
+              onClick={() => setCustomStart(null)}
+              className="text-[10px] text-gray-400 hover:text-white mt-1 px-1"
+            >
+              Reset to preset start
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Centered: Anomaly banner (wheel/thermal only) */}
+      <AnomalyBanner />
+
+      {/* Debug overlay — outside all error boundaries so it survives crashes */}
+      <DebugOverlay />
     </div>
   );
 }

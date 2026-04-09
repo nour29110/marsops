@@ -93,7 +93,7 @@ export function Terrain() {
         <meshStandardMaterial color="#2a0e04" roughness={1} metalness={0} />
       </mesh>
 
-      <mesh geometry={geometry} receiveShadow castShadow>
+      <mesh geometry={geometry}>
         <meshStandardMaterial
           vertexColors
           roughness={0.95}

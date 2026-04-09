@@ -21,6 +21,7 @@ from marsops.terrain.loader import Terrain
 logger = logging.getLogger(__name__)
 
 _MAX_REFINEMENT_ITERATIONS: int = 5
+_SAMPLE_RADIUS_CELLS: int = 12
 
 
 def _euclidean(a: tuple[int, int], b: tuple[int, int]) -> float:
@@ -119,26 +120,41 @@ def plan_mission(
         A :class:`~marsops.planner.mission.MissionPlan` with feasibility
         flag, predicted metrics, and reasoning.  Never raises.
     """
+    rows, cols = terrain.shape
+
     # -- Determine search region ------------------------------------------------
     if goal.region_of_interest is not None:
         row_min, col_min, row_max, col_max = goal.region_of_interest
     else:
-        rows, cols = terrain.shape
         row_min, col_min, row_max, col_max = 0, 0, rows, cols
+
+    # Constrain candidate sampling to a local window around the start.
+    start_r, start_c = goal.start
+    sample_row_min = max(row_min, start_r - _SAMPLE_RADIUS_CELLS)
+    sample_row_max = min(row_max, start_r + _SAMPLE_RADIUS_CELLS + 1)
+    sample_col_min = max(col_min, start_c - _SAMPLE_RADIUS_CELLS)
+    sample_col_max = min(col_max, start_c + _SAMPLE_RADIUS_CELLS + 1)
+
+    # Fall back to the ROI/full-region bounds if intersection is empty.
+    if sample_row_min >= sample_row_max or sample_col_min >= sample_col_max:
+        sample_row_min, sample_col_min = row_min, col_min
+        sample_row_max, sample_col_max = row_max, col_max
 
     # -- Step 1: Candidate generation -------------------------------------------
     sample_count = goal.min_waypoints * 3
     raw_points = _sample_grid_points(
-        row_min,
-        col_min,
-        row_max,
-        col_max,
+        sample_row_min,
+        sample_col_min,
+        sample_row_max,
+        sample_col_max,
         sample_count,
     )
 
     max_slope = goal.constraints.max_slope_deg
     traversable_candidates = [
-        (r, c) for r, c in raw_points if terrain.is_traversable(r, c, max_slope)
+        (r, c)
+        for r, c in raw_points
+        if (r, c) != goal.start and terrain.is_traversable(r, c, max_slope)
     ]
 
     # Keyword filtering
@@ -253,6 +269,21 @@ def plan_mission(
         logger.info("Dropped waypoint %s (farthest from start)", farthest_wp)
 
     # -- Step 4: Construct MissionPlan ------------------------------------------
+    # A plan that has no real waypoints (or only the start) is not actually a plan
+    real_waypoints = [wp for wp in waypoints if wp != goal.start]
+    if not real_waypoints:
+        return MissionPlan(
+            goal=goal,
+            waypoints=[],
+            full_path=[goal.start],
+            predicted_duration_s=0.0,
+            predicted_final_battery_pct=100.0,
+            predicted_distance_cells=0,
+            feasible=False,
+            reasoning=f"All candidate waypoints were dropped during refinement. "
+            f"No feasible plan from {goal.start}.",
+        )
+
     full_path, duration_s, final_battery_pct, distance_cells = plan_data
 
     kw_str = ", ".join(keywords) if keywords else "none"

@@ -16,6 +16,11 @@ export async function fetchTerrain(): Promise<TerrainData> {
   return handleResponse<TerrainData>(res);
 }
 
+export async function fetchTraversableMask(): Promise<{ shape: [number, number]; mask: boolean[][] }> {
+  const res = await fetch(`${BASE_URL}/api/terrain/traversable`);
+  return handleResponse<{ shape: [number, number]; mask: boolean[][] }>(res);
+}
+
 export async function sendCommand(
   text: string,
   opts: { replaySpeedMs?: number } = {},
