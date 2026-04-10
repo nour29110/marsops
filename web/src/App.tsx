@@ -149,7 +149,7 @@ export default function App() {
       <AnomalyBanner />
 
       {/* Debug overlay — outside all error boundaries so it survives crashes */}
-      <DebugOverlay />
+      {import.meta.env.DEV && <DebugOverlay />}
     </div>
   );
 }

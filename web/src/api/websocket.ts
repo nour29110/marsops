@@ -2,7 +2,14 @@ import { useEffect } from "react";
 import { useAppStore } from "../store";
 import type { TelemetryEvent } from "../types";
 
-export function useTelemetrySocket(wsUrl = "ws://localhost:8000/ws/telemetry") {
+function defaultWsUrl(): string {
+  const apiUrl = (import.meta.env.VITE_API_URL as string | undefined) ?? "http://localhost:8000";
+  // Convert http(s):// to ws(s)://
+  const wsBase = apiUrl.replace(/^http/, "ws");
+  return `${wsBase}/ws/telemetry`;
+}
+
+export function useTelemetrySocket(wsUrl = defaultWsUrl()) {
   useEffect(() => {
     const ws = new WebSocket(wsUrl);
     ws.onopen = () => console.log("WS connected");

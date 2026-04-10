@@ -44,3 +44,5 @@ data/raw/
 
 # Demo output
 output/
+.vercel
+node_modules/

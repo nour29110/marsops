@@ -26,7 +26,7 @@ function makeDustTexture(): THREE.Texture {
   return tex;
 }
 
-export function DustStorm({ roverRef }: { roverRef: RefObject<THREE.Group> }) {
+export function DustStorm({ roverRef }: { roverRef: RefObject<THREE.Group | null> }) {
   const activeAnomaly = useAppStore((s) => s.activeAnomaly);
   const isDustStorm = activeAnomaly === "dust_storm";
 

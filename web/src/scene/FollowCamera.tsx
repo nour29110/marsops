@@ -10,7 +10,7 @@ const tmpDesired = new Vector3();
 const tmpLookAt = new Vector3();
 const DEFAULT_CAM = new Vector3(40, 40, 40);
 
-export function FollowCamera({ roverRef }: { roverRef: RefObject<Group> }) {
+export function FollowCamera({ roverRef }: { roverRef: RefObject<Group | null> }) {
   const cameraMode = useAppStore((s) => s.cameraMode);
   const { camera } = useThree();
 
