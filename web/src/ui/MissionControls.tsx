@@ -107,8 +107,6 @@ const LABEL_CLS = "text-xs text-gray-400 uppercase tracking-wider mb-0.5 block";
 export function MissionControls() {
   const loading = useAppStore((s) => s.loading);
   const missionStatus = useAppStore((s) => s.missionStatus);
-  const cameraMode = useAppStore((s) => s.cameraMode);
-  const setCameraMode = useAppStore((s) => s.setCameraMode);
   const [selectedPresetId, setSelectedPresetId] = useState(PRESETS[0].id);
   const [anomaly, setAnomaly] = useState<AnomalyType>("dust storm");
   const [anomalyStep, setAnomalyStep] = useState(3);
@@ -335,30 +333,6 @@ export function MissionControls() {
         ⟲ Reset
       </button>
 
-      {/* Camera toggle */}
-      <div className="flex items-center gap-2">
-        <span className="text-xs text-gray-400">Camera:</span>
-        <button
-          onClick={() => setCameraMode("follow")}
-          className={`flex-1 py-1 text-xs rounded transition-colors ${
-            cameraMode === "follow"
-              ? "bg-orange-700 text-white"
-              : "bg-black/30 border border-white/10 text-gray-400 hover:text-white"
-          }`}
-        >
-          Follow
-        </button>
-        <button
-          onClick={() => setCameraMode("free")}
-          className={`flex-1 py-1 text-xs rounded transition-colors ${
-            cameraMode === "free"
-              ? "bg-orange-700 text-white"
-              : "bg-black/30 border border-white/10 text-gray-400 hover:text-white"
-          }`}
-        >
-          Free
-        </button>
-      </div>
     </div>
   );
 }

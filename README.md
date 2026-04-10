@@ -7,8 +7,8 @@
 [![uv](https://img.shields.io/badge/packaging-uv-261230)](https://github.com/astral-sh/uv)
 [![Ruff](https://img.shields.io/badge/linting-ruff-000)](https://github.com/astral-sh/ruff)
 [![mypy](https://img.shields.io/badge/typing-mypy%20strict-2a6db2)](http://mypy-lang.org/)
-[![pytest](https://img.shields.io/badge/tests-620%20passing-2aa877)](https://docs.pytest.org/)
-[![Coverage](https://img.shields.io/badge/coverage-93%25-2aa877)](https://coverage.readthedocs.io/)
+[![pytest](https://img.shields.io/badge/tests-621%20passing-2aa877)](https://docs.pytest.org/)
+[![Coverage](https://img.shields.io/badge/coverage-88%25-2aa877)](https://coverage.readthedocs.io/)
 [![MCP](https://img.shields.io/badge/MCP-server-ff6b6b)](https://modelcontextprotocol.io/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
@@ -20,7 +20,7 @@
 
 > The backend runs on a free tier that sleeps after 15 minutes of inactivity. The first mission you run may take 20 to 30 seconds to start while the server wakes up. Every subsequent run is instant.
 
-Open the site, click **Run Mission**, and watch a Curiosity-class rover plan a route across real Jezero Crater terrain, execute it in a live 3D scene, and survive a dust storm or a stuck wheel along the way. No install, no signup.
+Open the site, pick a mission preset — **Delta Survey** (flat delta terrain), **Crater Dip** (low crater floor, 4 science stops, dust storm), or **Rim Patrol** (high crater rim, wheel-stuck risk) — and watch a Curiosity-class rover plan a route across Jezero Crater terrain, execute it in a live 3D scene, and handle anomalies along the way. No install, no signup.
 
 ![Mission playback animation](docs/demo_playback.png)
 
@@ -89,7 +89,7 @@ Switch at the CLI with `--source real`, or from Claude Desktop by asking for it.
 git clone https://github.com/nour29110/marsops.git
 cd marsops
 uv sync
-uv run pytest          # 620 passing, 93% coverage
+uv run pytest          # 621 passing, 88% coverage
 uv run marsops-web     # FastAPI on http://localhost:8000
 ```
 

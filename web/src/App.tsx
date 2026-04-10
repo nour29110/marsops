@@ -4,6 +4,7 @@ import { MissionControls } from "./ui/MissionControls";
 import { EventLog } from "./ui/EventLog";
 import { AnomalyBanner } from "./ui/AnomalyBanner";
 import { TerrainMinimap } from "./ui/TerrainMinimap";
+import { CameraToggle } from "./ui/CameraToggle";
 import { sendCommand, fetchTerrain, fetchTraversableMask, startKeepAlive } from "./api/client";
 import { useTelemetrySocket } from "./api/websocket";
 import { useAppStore } from "./store";
@@ -147,6 +148,11 @@ export default function App() {
           )}
         </div>
       )}
+
+      {/* Bottom-right: Camera mode toggle */}
+      <div className="absolute bottom-4 right-4 z-10">
+        <CameraToggle />
+      </div>
 
       {/* Centered: Anomaly banner (wheel/thermal only) */}
       <AnomalyBanner />
