@@ -22,7 +22,6 @@ export const Rover = forwardRef<THREE.Group>(function Rover(_, fwdRef) {
 
   // Smooth visual position / heading / tilt — updated every frame, decoupled from store events
   const visualPosRef = useRef(new THREE.Vector3());
-  const visualHeadingRef = useRef(0);
   const visualQuatRef = useRef(new THREE.Quaternion());
 
   // Precompute terrain height lookup
