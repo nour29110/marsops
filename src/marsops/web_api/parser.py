@@ -59,15 +59,10 @@ _RE_TERRAIN_INFO: re.Pattern[str] = re.compile(
 )
 
 _RE_PLAN_MISSION: re.Pattern[str] = re.compile(
-    r"\bplan\s+(?:a\s+)?(?:[\w\s]*?\s+)?mission\b"
+    r"\bplan\s+(?:a\s+)?mission\b"
     r"(?:\s+(?:from|starting\s+at|at))?"
     r"\s*\(?\s*(\d+)\s*,?\s*(\d+)\s*\)?"
     r"(?:\s+(?:with\s+)?(\d+)\s+waypoints?)?",
-    re.IGNORECASE,
-)
-
-_RE_PLAN_ROI: re.Pattern[str] = re.compile(
-    r"\broi\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\b",
     re.IGNORECASE,
 )
 
@@ -219,26 +214,20 @@ def parse_command(text: str) -> ParsedCommand:
             "start_row": start_row,
             "start_col": start_col,
             "min_waypoints": min_waypoints,
-            "description": clean,
+            "description": (
+                f"plan mission from ({start_row},{start_col}) with {min_waypoints} waypoints"
+            ),
         }
-        # Explicit ROI bounding box: "roi <rowMin> <colMin> <rowMax> <colMax>"
-        m_roi = _RE_PLAN_ROI.search(clean)
-        if m_roi:
-            args["roi_row_min"] = int(m_roi.group(1))
-            args["roi_col_min"] = int(m_roi.group(2))
-            args["roi_row_max"] = int(m_roi.group(3))
-            args["roi_col_max"] = int(m_roi.group(4))
-        else:
-            # Fallback: named quadrant ("in the NW quadrant")
-            m_quad = _RE_PLAN_QUADRANT.search(clean)
-            if m_quad:
-                key = m_quad.group(1).lower()
-                roi = _QUADRANT_MAP.get(key)
-                if roi:
-                    args["roi_row_min"] = roi[0]
-                    args["roi_col_min"] = roi[1]
-                    args["roi_row_max"] = roi[2]
-                    args["roi_col_max"] = roi[3]
+        m_quad = _RE_PLAN_QUADRANT.search(clean)
+        if m_quad:
+            key = m_quad.group(1).lower()
+            roi = _QUADRANT_MAP.get(key)
+            if roi:
+                args["roi_row_min"] = roi[0]
+                args["roi_col_min"] = roi[1]
+                args["roi_row_max"] = roi[2]
+                args["roi_col_max"] = roi[3]
+                args["description"] = str(args["description"]) + f" in {key} quadrant"
         return ParsedCommand(intent="plan_mission", args=args)
 
     # --- execute mission ---
