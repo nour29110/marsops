@@ -3,6 +3,15 @@ import type { TerrainData, TelemetryEvent } from "./types";
 
 export type ActiveAnomaly = "dust_storm" | "wheel_stuck" | "thermal_alert" | "repositioning";
 
+export type MissionPhase =
+  | "resetting"
+  | "loading_terrain"
+  | "analyzing"
+  | "planning"
+  | "injecting_anomaly"
+  | "executing"
+  | null;
+
 export interface LogEntry {
   id: string;
   icon: string;
@@ -42,6 +51,8 @@ interface AppState {
   setActiveAnomaly: (a: ActiveAnomaly | null) => void;
   loading: boolean;
   setLoading: (loading: boolean) => void;
+  missionPhase: MissionPhase;
+  setMissionPhase: (phase: MissionPhase) => void;
   customStart: [number, number] | null;
   setCustomStart: (s: [number, number] | null) => void;
   traversableMask: boolean[][] | null;
@@ -95,6 +106,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   setActiveAnomaly: (a) => set({ activeAnomaly: a }),
   loading: false,
   setLoading: (loading) => set({ loading }),
+  missionPhase: null,
+  setMissionPhase: (phase) => set({ missionPhase: phase }),
   customStart: null,
   setCustomStart: (s) => set({ customStart: s }),
   traversableMask: null,
@@ -184,5 +197,6 @@ export const useAppStore = create<AppState>((set, get) => ({
       activeAnomaly: null,
       eventLog: [],
       missionStartAt: null,
+      missionPhase: null,
     }),
 }));

@@ -4,6 +4,7 @@ import { sendCommand, fetchTerrain, fetchTraversableMask } from "../api/client";
 import { NumberField } from "./NumberField";
 import type { MissionPlanResult } from "../types";
 import { logUserAction } from "../debug/useLogAction";
+import { MissionProgress } from "./MissionProgress";
 
 type AnomalyType = "none" | "dust storm" | "wheel stuck" | "thermal alert";
 
@@ -115,10 +116,15 @@ export function MissionControls() {
     store.setLoading(true);
     store.reset();
     try {
+      store.setMissionPhase("resetting");
       await sendCommand("reset session");
+
+      store.setMissionPhase("loading_terrain");
       await sendCommand("load synthetic terrain");
       const t = await fetchTerrain();
       store.setTerrain(t);
+
+      store.setMissionPhase("analyzing");
       try {
         const m = await fetchTraversableMask();
         useAppStore.getState().setTraversableMask(m.mask);
@@ -136,6 +142,7 @@ export function MissionControls() {
       let planResult: MissionPlanResult | null = null;
       let currentStart: [number, number] = [startRow, startCol];
 
+      store.setMissionPhase("planning");
       while (attempt < 5) {
         tried.add(`${currentStart[0]},${currentStart[1]}`);
         const planText = `plan a mission from (${currentStart[0]},${currentStart[1]}) with ${preset.waypoints} waypoints`;
@@ -188,12 +195,15 @@ export function MissionControls() {
       store.setRoverCell(path[0]);
 
       if (anomaly !== "none") {
+        store.setMissionPhase("injecting_anomaly");
         await sendCommand(`inject a ${anomaly} at step ${anomalyStep}`);
       }
+      store.setMissionPhase("executing");
       await sendCommand("execute mission", { replaySpeedMs: 800 });
     } catch (err) {
       console.error("Mission error:", err);
     } finally {
+      useAppStore.getState().setMissionPhase(null);
       useAppStore.getState().setLoading(false);
     }
   }
@@ -288,6 +298,9 @@ export function MissionControls() {
       >
         {loading ? "Running…" : "▶ Run Mission"}
       </button>
+
+      {/* Live progress steps */}
+      <MissionProgress />
 
       {/* Reset button */}
       <button
