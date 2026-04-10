@@ -44,36 +44,9 @@ There are three fully working entry points, in order of effort to try:
 
 ---
 
-## Architecture at a glance
+## Architecture
 
 See [`docs/architecture.md`](docs/architecture.md) for the full Mermaid diagram and module-by-module walk through.
-      Web UI                           Claude Desktop
-(React + R3F + Vite)                      (MCP client)
-Vercel                               local machine
-│                                      │
-│  HTTPS + WebSocket                   │  stdio MCP
-▼                                      ▼
-┌─────────────────────────────────────────────────────────┐
-│                  MarsOps backend (Render)                │
-│                                                          │
-│   FastAPI /api/command  +  MCP server  (6 tools each)    │
-│                                                          │
-│   Planning layer                                         │
-│     ├── mission-planner sub-agent  (Opus)                │
-│     │     └── iterative plan → dry-run → refine loop     │
-│     ├── A* pathfinder with slope-weighted cost           │
-│     └── recovery runtime (anomaly-handler, Opus)         │
-│                                                          │
-│   Simulation layer                                       │
-│     ├── Rover (battery, clock, heading, state)           │
-│     ├── Execution engine with anomaly injection          │
-│     └── Closed-loop recovery on anomaly                  │
-│                                                          │
-│   Data layer                                             │
-│     ├── Terrain loader (synthetic or real USGS CTX DTM)  │
-│     ├── Telemetry event log                              │
-│     └── Markdown mission reporter                        │
-└─────────────────────────────────────────────────────────┘
 
 ## The seven sub-agents
 
