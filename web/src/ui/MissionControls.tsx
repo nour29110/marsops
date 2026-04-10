@@ -202,6 +202,13 @@ export function MissionControls() {
       await sendCommand("execute mission", { replaySpeedMs: 800 });
     } catch (err) {
       console.error("Mission error:", err);
+      const msg =
+        err instanceof Error ? err.message : "Unknown error";
+      useAppStore.getState().pushLogEntry({
+        icon: "❌",
+        text: `Mission failed: ${msg}. The backend may be waking up — try again in a few seconds.`,
+        severity: "error",
+      });
     } finally {
       useAppStore.getState().setMissionPhase(null);
       useAppStore.getState().setLoading(false);

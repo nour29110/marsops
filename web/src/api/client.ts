@@ -12,12 +12,12 @@ async function handleResponse<T>(res: Response): Promise<T> {
 }
 
 export async function fetchTerrain(): Promise<TerrainData> {
-  const res = await fetch(`${BASE_URL}/api/terrain`);
+  const res = await fetchWithRetry(`${BASE_URL}/api/terrain`);
   return handleResponse<TerrainData>(res);
 }
 
 export async function fetchTraversableMask(): Promise<{ shape: [number, number]; mask: boolean[][] }> {
-  const res = await fetch(`${BASE_URL}/api/terrain/traversable`);
+  const res = await fetchWithRetry(`${BASE_URL}/api/terrain/traversable`);
   return handleResponse<{ shape: [number, number]; mask: boolean[][] }>(res);
 }
 
@@ -39,6 +39,34 @@ export function startKeepAlive(): () => void {
   };
 }
 
+async function fetchWithRetry(
+  input: RequestInfo,
+  init?: RequestInit,
+  retries = 3,
+  delayMs = 2000,
+): Promise<Response> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(input, init);
+      // Render returns 502 while the container is booting — retry
+      if (res.status === 502 && attempt < retries) {
+        await new Promise((r) => setTimeout(r, delayMs));
+        continue;
+      }
+      return res;
+    } catch (err) {
+      // Network error (CORS block on a 502, or container unreachable)
+      if (attempt < retries) {
+        await new Promise((r) => setTimeout(r, delayMs));
+        continue;
+      }
+      throw err;
+    }
+  }
+  // Unreachable, but satisfies TS
+  throw new Error("fetchWithRetry: exhausted retries");
+}
+
 export async function sendCommand(
   text: string,
   opts: { replaySpeedMs?: number } = {},
@@ -47,7 +75,7 @@ export async function sendCommand(
   if (opts.replaySpeedMs !== undefined) {
     body.replay_speed_ms = opts.replaySpeedMs;
   }
-  const res = await fetch(`${BASE_URL}/api/command`, {
+  const res = await fetchWithRetry(`${BASE_URL}/api/command`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
