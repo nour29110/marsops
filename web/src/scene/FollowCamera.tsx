@@ -32,7 +32,7 @@ export function FollowCamera({ roverRef }: { roverRef: RefObject<Group | null> }
     const heading = rover.rotation.y;
     tmpDesired.set(
       tmpPos.x - Math.sin(heading) * 14,
-      tmpPos.y + 10,
+      tmpPos.y + 12,
       tmpPos.z - Math.cos(heading) * 14,
     );
 
