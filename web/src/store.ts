@@ -72,7 +72,7 @@ function makeEntry(
   return {
     id: crypto.randomUUID(),
     icon,
-    text: text.slice(0, 60),
+    text,
     severity,
     timestamp: Date.now(),
   };
@@ -93,10 +93,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   eventLog: [],
   pushLogEntry: (entry) =>
     set((state) => {
-      const truncated = { ...entry, text: entry.text.slice(0, 60) };
       const next = [
         ...state.eventLog,
-        { ...truncated, id: crypto.randomUUID(), timestamp: Date.now() },
+        { ...entry, id: crypto.randomUUID(), timestamp: Date.now() },
       ];
       return { eventLog: next.slice(-20) };
     }),

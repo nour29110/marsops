@@ -214,9 +214,7 @@ def parse_command(text: str) -> ParsedCommand:
             "start_row": start_row,
             "start_col": start_col,
             "min_waypoints": min_waypoints,
-            "description": (
-                f"plan mission from ({start_row},{start_col}) with {min_waypoints} waypoints"
-            ),
+            "description": clean,
         }
         m_quad = _RE_PLAN_QUADRANT.search(clean)
         if m_quad:
@@ -227,7 +225,7 @@ def parse_command(text: str) -> ParsedCommand:
                 args["roi_col_min"] = roi[1]
                 args["roi_row_max"] = roi[2]
                 args["roi_col_max"] = roi[3]
-                args["description"] = str(args["description"]) + f" in {key} quadrant"
+                args["description"] = clean + f" in {key} quadrant"
         return ParsedCommand(intent="plan_mission", args=args)
 
     # --- execute mission ---

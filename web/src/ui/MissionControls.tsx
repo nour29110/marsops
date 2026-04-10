@@ -60,29 +60,43 @@ type MissionPreset = {
   description: string;
   start: [number, number];
   waypoints: number;
+  /** Terrain keywords passed to the planner (flat/high/low/delta). */
+  keywords: string;
+  /** Default anomaly for this preset. */
+  defaultAnomaly: AnomalyType;
+  defaultAnomalyStep: number;
 };
 
 const PRESETS: MissionPreset[] = [
   {
     id: "delta_survey",
     label: "Delta Survey",
-    description: "Short traverse across the ancient river delta",
+    description: "Short traverse across flat, low-elevation delta terrain",
     start: [10, 10],
     waypoints: 2,
+    keywords: "delta flat",
+    defaultAnomaly: "none",
+    defaultAnomalyStep: 3,
   },
   {
     id: "crater_dip",
     label: "Crater Dip",
-    description: "Longer descent into the crater floor with three science stops",
+    description: "Descent into low crater terrain with four science stops",
     start: [15, 15],
-    waypoints: 3,
+    waypoints: 4,
+    keywords: "low",
+    defaultAnomaly: "dust storm",
+    defaultAnomalyStep: 4,
   },
   {
     id: "rim_patrol",
     label: "Rim Patrol",
-    description: "Traverse along the inner crater rim",
+    description: "Traverse along the high-elevation crater rim",
     start: [12, 8],
-    waypoints: 2,
+    waypoints: 3,
+    keywords: "high",
+    defaultAnomaly: "wheel stuck",
+    defaultAnomalyStep: 3,
   },
 ];
 
@@ -104,6 +118,9 @@ export function MissionControls() {
 
   function selectPreset(id: string) {
     setSelectedPresetId(id);
+    const p = PRESETS.find((pr) => pr.id === id)!;
+    setAnomaly(p.defaultAnomaly);
+    setAnomalyStep(p.defaultAnomalyStep);
     logUserAction(`Selected preset: ${id}`);
   }
 
@@ -145,7 +162,7 @@ export function MissionControls() {
       store.setMissionPhase("planning");
       while (attempt < 5) {
         tried.add(`${currentStart[0]},${currentStart[1]}`);
-        const planText = `plan a mission from (${currentStart[0]},${currentStart[1]}) with ${preset.waypoints} waypoints`;
+        const planText = `plan a mission from (${currentStart[0]},${currentStart[1]}) with ${preset.waypoints} waypoints ${preset.keywords}`;
         const resp = await sendCommand(planText);
         const r = (resp as { parsed: unknown; result: MissionPlanResult })
           .result as MissionPlanResult;
