@@ -24,7 +24,7 @@ Open the site, click **Run Mission**, and watch a Curiosity-class rover plan a r
 
 ![Mission playback animation](docs/demo_playback.png)
 
-<img src="docs/mcp_conversation_1.png" width="400">
+<img src="docs/mcp_conversation_1.png" width="600">
 ---
 
 ## What this is
