@@ -6,7 +6,7 @@ import { useAppStore } from "../store";
 
 const ROVER_SCALE = 1.0;
 const HEIGHT_SCALE = 8;
-const Y_OFFSET = 1.5;
+const Y_OFFSET = 0.35;
 
 export const Rover = forwardRef<THREE.Group>(function Rover(_, fwdRef) {
   const terrain = useAppStore((s) => s.terrain);
@@ -20,9 +20,10 @@ export const Rover = forwardRef<THREE.Group>(function Rover(_, fwdRef) {
   const groupRef = useRef<THREE.Group>(null);
   useImperativeHandle(fwdRef, () => groupRef.current!);
 
-  // Smooth visual position / heading — updated every frame, decoupled from store events
+  // Smooth visual position / heading / tilt — updated every frame, decoupled from store events
   const visualPosRef = useRef(new THREE.Vector3());
   const visualHeadingRef = useRef(0);
+  const visualQuatRef = useRef(new THREE.Quaternion());
 
   // Precompute terrain height lookup
   const elevData = useMemo(() => {
@@ -44,26 +45,46 @@ export const Rover = forwardRef<THREE.Group>(function Rover(_, fwdRef) {
     return { elev, rows, cols, minE, range };
   }, [terrain]);
 
-  // Discrete target derived from store state
-  const target = useMemo(() => {
+  // Discrete target position + terrain surface normal derived from store state
+  const targetData = useMemo(() => {
     if (!terrain || !roverCell || !elevData) return null;
     const [row, col] = roverCell;
     const { elev, cols, rows, minE, range } = elevData;
     const clampedRow = Math.max(0, Math.min(row, rows - 1));
     const clampedCol = Math.max(0, Math.min(col, cols - 1));
     const normalizedH = ((elev[clampedRow][clampedCol] - minE) / range) * HEIGHT_SCALE;
-    return new THREE.Vector3(col - cols / 2, normalizedH + Y_OFFSET, row - rows / 2);
+    const pos = new THREE.Vector3(col - cols / 2, normalizedH + Y_OFFSET, row - rows / 2);
+
+    // Compute terrain surface normal from neighbouring cells
+    const hAt = (r: number, c: number) => {
+      const cr = Math.max(0, Math.min(r, rows - 1));
+      const cc = Math.max(0, Math.min(c, cols - 1));
+      return ((elev[cr][cc] - minE) / range) * HEIGHT_SCALE;
+    };
+    const dydx = hAt(clampedRow, clampedCol + 1) - hAt(clampedRow, clampedCol - 1);
+    const dydz = hAt(clampedRow + 1, clampedCol) - hAt(clampedRow - 1, clampedCol);
+    const normal = new THREE.Vector3(-dydx, 2, -dydz).normalize();
+
+    return { pos, normal };
   }, [terrain, roverCell, elevData]);
 
   // Snap visual position to start of new mission when path changes
   useEffect(() => {
-    if (target) {
-      visualPosRef.current.copy(target);
+    if (targetData) {
+      visualPosRef.current.copy(targetData.pos);
     }
   }, [path]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Reusable scratch objects (avoids allocations per frame)
+  const _up = useMemo(() => new THREE.Vector3(0, 1, 0), []);
+  const _tiltQuat = useMemo(() => new THREE.Quaternion(), []);
+  const _headingQuat = useMemo(() => new THREE.Quaternion(), []);
+  const _targetQuat = useMemo(() => new THREE.Quaternion(), []);
+
   useFrame((_, delta) => {
-    if (!groupRef.current || !target) return;
+    if (!groupRef.current || !targetData) return;
+
+    const { pos: target, normal } = targetData;
 
     // Snap on first placement, otherwise lerp smoothly (frame-rate-independent)
     if (visualPosRef.current.distanceTo(target) > 30) {
@@ -73,10 +94,15 @@ export const Rover = forwardRef<THREE.Group>(function Rover(_, fwdRef) {
     }
     groupRef.current.position.copy(visualPosRef.current);
 
-    const targetY = (Math.PI / 180) * roverHeading + Math.PI;
-    visualHeadingRef.current +=
-      (targetY - visualHeadingRef.current) * Math.min(delta * 4.0, 1);
-    groupRef.current.rotation.y = visualHeadingRef.current;
+    // Build target orientation: tilt to terrain normal + heading rotation
+    _tiltQuat.setFromUnitVectors(_up, normal);
+    const headingAngle = (Math.PI / 180) * roverHeading + Math.PI;
+    _headingQuat.setFromAxisAngle(_up, headingAngle);
+    _targetQuat.copy(_tiltQuat).multiply(_headingQuat);
+
+    // Smooth slerp towards target orientation
+    visualQuatRef.current.slerp(_targetQuat, Math.min(delta * 3.0, 1));
+    groupRef.current.quaternion.copy(visualQuatRef.current);
   });
 
   if (!terrain || !roverCell) return null;

@@ -5,6 +5,7 @@ import { EventLog } from "./ui/EventLog";
 import { AnomalyBanner } from "./ui/AnomalyBanner";
 import { TerrainMinimap } from "./ui/TerrainMinimap";
 import { CameraToggle } from "./ui/CameraToggle";
+import { MissionComplete } from "./ui/MissionComplete";
 import { sendCommand, fetchTerrain, fetchTraversableMask, startKeepAlive } from "./api/client";
 import { useTelemetrySocket } from "./api/websocket";
 import { useAppStore } from "./store";
@@ -156,6 +157,9 @@ export default function App() {
 
       {/* Centered: Anomaly banner (wheel/thermal only) */}
       <AnomalyBanner />
+
+      {/* Centered: Mission complete checkmark */}
+      <MissionComplete />
 
       {/* Debug overlay — outside all error boundaries so it survives crashes */}
       {import.meta.env.DEV && <DebugOverlay />}

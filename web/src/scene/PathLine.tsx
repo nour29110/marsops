@@ -4,7 +4,7 @@ import * as THREE from "three";
 import { useAppStore } from "../store";
 
 const HEIGHT_SCALE = 8;
-const PATH_Y_OFFSET = 0.5;
+const PATH_Y_OFFSET = 0.15;
 
 export function PathLine() {
   const path = useAppStore((s) => s.path);
@@ -45,10 +45,24 @@ export function PathLine() {
   if (!points || points.length < 2) return null;
 
   return (
-    <Line
-      points={points}
-      color="#00e5ff"
-      lineWidth={3}
-    />
+    <group>
+      {/* Outer glow line */}
+      <Line
+        points={points}
+        color="#00e5ff"
+        lineWidth={5}
+        transparent
+        opacity={0.15}
+      />
+      {/* Core dashed line */}
+      <Line
+        points={points}
+        color="#00e5ff"
+        lineWidth={2}
+        dashed
+        dashSize={0.8}
+        gapSize={0.4}
+      />
+    </group>
   );
 }
