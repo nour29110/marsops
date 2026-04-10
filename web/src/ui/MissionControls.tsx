@@ -58,31 +58,42 @@ type MissionPreset = {
   id: string;
   label: string;
   description: string;
+  /** Start cell on the full 500x500 terrain grid. */
   start: [number, number];
   waypoints: number;
+  /** Keywords the planner uses to filter waypoint candidates (flat/high/low/delta). */
+  keywords: string;
+  /** Optional region-of-interest bounding box [rowMin, colMin, rowMax, colMax]. */
+  roi?: [number, number, number, number];
 };
 
 const PRESETS: MissionPreset[] = [
   {
     id: "delta_survey",
     label: "Delta Survey",
-    description: "Short traverse across the ancient river delta",
-    start: [10, 10],
+    description: "Traverse the NW river delta — flat, low-elevation terrain",
+    start: [80, 80],
     waypoints: 2,
+    keywords: "delta flat",
+    roi: [0, 0, 200, 200],
   },
   {
     id: "crater_dip",
     label: "Crater Dip",
-    description: "Longer descent into the crater floor with three science stops",
-    start: [15, 15],
-    waypoints: 3,
+    description: "Descend into the central crater depression with 4 science stops",
+    start: [200, 250],
+    waypoints: 4,
+    keywords: "low",
+    roi: [150, 150, 350, 350],
   },
   {
     id: "rim_patrol",
     label: "Rim Patrol",
-    description: "Traverse along the inner crater rim",
-    start: [12, 8],
-    waypoints: 2,
+    description: "Patrol the high-elevation crater rim in the SE quadrant",
+    start: [350, 350],
+    waypoints: 3,
+    keywords: "high",
+    roi: [250, 250, 450, 450],
   },
 ];
 
@@ -145,7 +156,10 @@ export function MissionControls() {
       store.setMissionPhase("planning");
       while (attempt < 5) {
         tried.add(`${currentStart[0]},${currentStart[1]}`);
-        const planText = `plan a mission from (${currentStart[0]},${currentStart[1]}) with ${preset.waypoints} waypoints`;
+        const roiClause = preset.roi
+          ? ` roi ${preset.roi[0]} ${preset.roi[1]} ${preset.roi[2]} ${preset.roi[3]}`
+          : "";
+        const planText = `plan a ${preset.keywords} mission from (${currentStart[0]},${currentStart[1]}) with ${preset.waypoints} waypoints${roiClause}`;
         const resp = await sendCommand(planText);
         const r = (resp as { parsed: unknown; result: MissionPlanResult })
           .result as MissionPlanResult;
