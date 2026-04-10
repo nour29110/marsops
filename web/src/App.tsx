@@ -4,7 +4,7 @@ import { MissionControls } from "./ui/MissionControls";
 import { EventLog } from "./ui/EventLog";
 import { AnomalyBanner } from "./ui/AnomalyBanner";
 import { TerrainMinimap } from "./ui/TerrainMinimap";
-import { sendCommand, fetchTerrain, fetchTraversableMask } from "./api/client";
+import { sendCommand, fetchTerrain, fetchTraversableMask, startKeepAlive } from "./api/client";
 import { useTelemetrySocket } from "./api/websocket";
 import { useAppStore } from "./store";
 import { ErrorBoundary } from "./debug/ErrorBoundary";
@@ -27,6 +27,9 @@ export default function App() {
   const missionStatus = useAppStore((s) => s.missionStatus);
 
   useTelemetrySocket();
+
+  // Keep Render backend warm (free tier spins down after inactivity)
+  useEffect(() => startKeepAlive(), []);
 
   // Proactively initialize terrain on mount
   useEffect(() => {

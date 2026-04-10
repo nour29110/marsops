@@ -21,6 +21,24 @@ export async function fetchTraversableMask(): Promise<{ shape: [number, number];
   return handleResponse<{ shape: [number, number]; mask: boolean[][] }>(res);
 }
 
+const KEEPALIVE_INTERVAL_MS = 4 * 60 * 1000; // 4 minutes
+let keepAliveTimer: ReturnType<typeof setInterval> | null = null;
+
+export function startKeepAlive(): () => void {
+  if (keepAliveTimer) return () => {};
+  const ping = () => {
+    fetch(`${BASE_URL}/healthz`).catch(() => {});
+  };
+  ping();
+  keepAliveTimer = setInterval(ping, KEEPALIVE_INTERVAL_MS);
+  return () => {
+    if (keepAliveTimer) {
+      clearInterval(keepAliveTimer);
+      keepAliveTimer = null;
+    }
+  };
+}
+
 export async function sendCommand(
   text: string,
   opts: { replaySpeedMs?: number } = {},
