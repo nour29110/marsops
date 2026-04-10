@@ -370,14 +370,21 @@ async def ws_telemetry(websocket: WebSocket) -> None:
 def run() -> None:
     """Start the MarsOps Web API server with Uvicorn.
 
-    Binds to ``0.0.0.0:8000``.  Intended for use as the ``marsops-web``
+    Host and port can be set via ``--host`` and ``--port`` (defaults
+    ``0.0.0.0`` and ``8000``).  Intended for use as the ``marsops-web``
     console script entry point.
     """
+    import argparse
+
+    parser = argparse.ArgumentParser(prog="marsops-web")
+    parser.add_argument("--host", default="0.0.0.0")
+    parser.add_argument("--port", type=int, default=8000)
+    args = parser.parse_args()
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     )
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host=args.host, port=args.port)
 
 
 if __name__ == "__main__":

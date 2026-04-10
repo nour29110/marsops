@@ -59,17 +59,15 @@ type MissionPreset = {
   description: string;
   start: [number, number];
   waypoints: number;
-  region: "NW" | "NE" | "SW" | "SE" | "anywhere";
 };
 
 const PRESETS: MissionPreset[] = [
   {
     id: "delta_survey",
     label: "Delta Survey",
-    description: "Short traverse across the ancient river delta in the NW",
+    description: "Short traverse across the ancient river delta",
     start: [10, 10],
     waypoints: 2,
-    region: "NW",
   },
   {
     id: "crater_dip",
@@ -77,7 +75,6 @@ const PRESETS: MissionPreset[] = [
     description: "Longer descent into the crater floor with three science stops",
     start: [15, 15],
     waypoints: 3,
-    region: "NW",
   },
   {
     id: "rim_patrol",
@@ -85,7 +82,6 @@ const PRESETS: MissionPreset[] = [
     description: "Traverse along the inner crater rim",
     start: [12, 8],
     waypoints: 2,
-    region: "NW",
   },
 ];
 
