@@ -45,7 +45,7 @@ COPY --from=builder --chown=marsops:marsops /app/src /app/src
 COPY --from=builder --chown=marsops:marsops /app/pyproject.toml /app/pyproject.toml
 
 # Create the data cache dir AS ROOT, then chown it to marsops (must run before USER marsops)
-RUN mkdir -p /app/data/raw && chown -R marsops:marsops /app/data
+RUN mkdir -p /app/data/raw /app/output && chown -R marsops:marsops /app/data /app/output
 
 ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
