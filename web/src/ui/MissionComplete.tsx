@@ -1,13 +1,18 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAppStore } from "../store";
 
 export function MissionComplete() {
   const missionStatus = useAppStore((s) => s.missionStatus);
+  const prevStatusRef = useRef(missionStatus);
   const [visible, setVisible] = useState(false);
   const [fadeOut, setFadeOut] = useState(false);
 
   useEffect(() => {
-    if (missionStatus === "complete") {
+    const prev = prevStatusRef.current;
+    prevStatusRef.current = missionStatus;
+
+    // Only trigger on a real transition into "complete" (from running)
+    if (missionStatus === "complete" && prev === "running") {
       setVisible(true);
       setFadeOut(false);
       const fadeTimer = setTimeout(() => setFadeOut(true), 1800);
@@ -17,8 +22,10 @@ export function MissionComplete() {
         clearTimeout(hideTimer);
       };
     }
-    setVisible(false);
-    setFadeOut(false);
+    if (missionStatus !== "complete") {
+      setVisible(false);
+      setFadeOut(false);
+    }
   }, [missionStatus]);
 
   if (!visible) return null;

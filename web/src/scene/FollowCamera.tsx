@@ -28,12 +28,12 @@ export function FollowCamera({ roverRef }: { roverRef: RefObject<Group | null> }
     // Read the rover's actual interpolated world position (not the logical cell)
     rover.getWorldPosition(tmpPos);
 
-    // Camera sits 12 units behind and 6 units above the rover
+    // Camera sits 14 units behind and 10 units above the rover
     const heading = rover.rotation.y;
     tmpDesired.set(
-      tmpPos.x - Math.sin(heading) * 12,
-      tmpPos.y + 6,
-      tmpPos.z - Math.cos(heading) * 12,
+      tmpPos.x - Math.sin(heading) * 14,
+      tmpPos.y + 10,
+      tmpPos.z - Math.cos(heading) * 14,
     );
 
     camera.position.lerp(tmpDesired, Math.min(delta * 2.5, 1));
