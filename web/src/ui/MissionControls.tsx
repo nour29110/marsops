@@ -310,6 +310,10 @@ export function MissionControls() {
         </div>
       )}
 
+      <div className="text-[11px] text-gray-400 mt-2 px-2 leading-snug">
+        Demo presets are tuned to showcase recovery, so most runs still complete.
+      </div>
+
       <div className="border-t border-white/10 my-3" />
 
       {/* Run button */}

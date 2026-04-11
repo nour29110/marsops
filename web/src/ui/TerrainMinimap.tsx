@@ -55,7 +55,7 @@ export function TerrainMinimap() {
         let red = Math.round(74 + t * (216 - 74));
         let green = Math.round(30 + t * (155 - 30));
         let blue = Math.round(14 + t * (106 - 14));
-        // Darken non-traversable cells with a cool tint
+        // Darken cells that are poor mission-start candidates.
         if (mask && mask[r] && !mask[r][c]) {
           red = Math.round(red * 0.2 + 20);
           green = Math.round(green * 0.2 + 20);
@@ -109,7 +109,7 @@ export function TerrainMinimap() {
     if (mask && mask[row] && !mask[row][col]) {
       useAppStore.getState().pushLogEntry({
         icon: "🚫",
-        text: `Cell (${row},${col}) is not traversable`,
+        text: `Cell (${row},${col}) is not recommended as a mission start`,
         severity: "warn",
       });
       return;
@@ -127,9 +127,6 @@ export function TerrainMinimap() {
         className="cursor-crosshair rounded border border-white/20 block"
         onClick={handleClick}
       />
-      <div className="text-[9px] text-gray-500 mt-1 px-1 leading-tight">
-        Dim cells = not traversable
-      </div>
     </div>
   );
 }

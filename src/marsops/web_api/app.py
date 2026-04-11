@@ -45,12 +45,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ---------------------------------------------------------------------------
-# Request / response models
-# ---------------------------------------------------------------------------
-
-_DOWNSAMPLE_THRESHOLD: int = 50
-
 
 class CommandRequest(BaseModel):
     """HTTP request body for POST /api/command.
@@ -88,9 +82,6 @@ class CommandResponse(BaseModel):
 def _terrain_payload() -> dict[str, Any] | None:
     """Build a JSON-serialisable terrain payload from the current session.
 
-    Downsamples the elevation grid by a factor of 2 when either dimension
-    exceeds :data:`_DOWNSAMPLE_THRESHOLD` to keep HTTP response sizes small.
-
     Returns:
         A dict with ``shape``, ``elevation``, ``resolution_m``, and ``source``
         keys, or ``None`` if no terrain is currently loaded in the session.
@@ -99,13 +90,10 @@ def _terrain_payload() -> dict[str, Any] | None:
     if session.terrain is None:
         return None
     terrain = session.terrain
-    elev = terrain.elevation
     rows, cols = terrain.shape
-    if rows > _DOWNSAMPLE_THRESHOLD or cols > _DOWNSAMPLE_THRESHOLD:
-        elev = elev[::2, ::2]
     return {
         "shape": [rows, cols],
-        "elevation": elev.tolist(),
+        "elevation": terrain.elevation.tolist(),
         "resolution_m": terrain.metadata.resolution_m,
         "source": session.terrain_source or "unknown",
     }
@@ -181,17 +169,18 @@ async def healthz() -> dict[str, str]:
 
 @app.get("/api/terrain/traversable")
 async def get_traversable_mask() -> dict[str, Any]:
-    """Return a 2D mask of cells where the rover can start.
+    """Return a 2D mask of cells that are good mission starts in the web UI.
 
-    A cell is considered usable if it passes two filters:
-    1. It is traversable (Terrain.is_traversable with the default 25 deg slope
-       limit) AND has at least 4 traversable 8-neighbors.
+    This is intentionally stricter than raw rover traversability. A cell is
+    considered usable if it passes two filters:
+    1. It is traversable (``Terrain.is_traversable`` with the default 25 deg
+       slope limit) AND has at least 4 traversable 8-neighbors.
     2. It has at least 15 traversable cells within a 10-cell Chebyshev radius,
        filtering out isolated pockets and extreme edges where the planner
-       cannot place waypoints.
+       cannot place waypoints reliably.
 
     Returns:
-        200 — dict with ``shape`` ([ds_rows, ds_cols]) and ``mask``
+        200 — dict with ``shape`` ([rows, cols]) and ``mask``
             (2-D list of booleans).
         404 — ``{"detail": "no terrain loaded"}`` when no terrain is in session.
     """
@@ -202,26 +191,18 @@ async def get_traversable_mask() -> dict[str, Any]:
     terrain = session.terrain
     rows, cols = terrain.shape
 
-    # Match the downsampling that /api/terrain applies, so the mask
-    # aligns with the elevation array the frontend already has.
-    downsample = 2 if max(rows, cols) > 50 else 1
-    ds_rows = rows // downsample
-    ds_cols = cols // downsample
-
     # Pass 1: basic traversability + 4-neighbor connectivity
-    basic_mask: list[list[bool]] = [[False] * ds_cols for _ in range(ds_rows)]
-    for r in range(ds_rows):
-        for c in range(ds_cols):
-            src_r = r * downsample
-            src_c = c * downsample
-            if not terrain.is_traversable(src_r, src_c):
+    basic_mask: list[list[bool]] = [[False] * cols for _ in range(rows)]
+    for r in range(rows):
+        for c in range(cols):
+            if not terrain.is_traversable(r, c):
                 continue
             neighbors = 0
             for dr in (-1, 0, 1):
                 for dc in (-1, 0, 1):
                     if dr == 0 and dc == 0:
                         continue
-                    nr, nc = src_r + dr, src_c + dc
+                    nr, nc = r + dr, c + dc
                     if 0 <= nr < rows and 0 <= nc < cols and terrain.is_traversable(nr, nc):
                         neighbors += 1
             if neighbors >= 4:
@@ -230,16 +211,16 @@ async def get_traversable_mask() -> dict[str, Any]:
     # Pass 2: require enough traversable cells within a local radius.
     radius = 10
     min_neighbors = 15
-    mask: list[list[bool]] = [[False] * ds_cols for _ in range(ds_rows)]
-    for r in range(ds_rows):
-        for c in range(ds_cols):
+    mask: list[list[bool]] = [[False] * cols for _ in range(rows)]
+    for r in range(rows):
+        for c in range(cols):
             if not basic_mask[r][c]:
                 continue
             count = 0
             r_min = max(0, r - radius)
-            r_max = min(ds_rows, r + radius + 1)
+            r_max = min(rows, r + radius + 1)
             c_min = max(0, c - radius)
-            c_max = min(ds_cols, c + radius + 1)
+            c_max = min(cols, c + radius + 1)
             for rr in range(r_min, r_max):
                 for cc in range(c_min, c_max):
                     if basic_mask[rr][cc]:
@@ -252,7 +233,7 @@ async def get_traversable_mask() -> dict[str, Any]:
                 mask[r][c] = True
 
     return {
-        "shape": [ds_rows, ds_cols],
+        "shape": [rows, cols],
         "mask": mask,
     }
 
@@ -260,9 +241,6 @@ async def get_traversable_mask() -> dict[str, Any]:
 @app.get("/api/terrain")
 async def get_terrain() -> dict[str, Any]:
     """Return the current session terrain as a JSON payload.
-
-    Downsamples grids larger than 50x50 by a factor of 2 before returning
-    to keep the HTTP response size manageable.
 
     Returns:
         200 — dict with ``shape``, ``elevation``, ``resolution_m``, ``source``.

@@ -164,8 +164,24 @@ def test_get_terrain_after_loading():
     assert "source" in body
     assert isinstance(body["elevation"], list)
     assert all(isinstance(row, list) for row in body["elevation"])
-    # shape[0] matches number of rows in elevation (possibly downsampled)
-    assert len(body["elevation"]) <= body["shape"][0]
+    assert len(body["elevation"]) == body["shape"][0]
+    assert len(body["elevation"][0]) == body["shape"][1]
+
+
+def test_get_traversable_mask_shape_matches_terrain_grid():
+    client.post("/api/command", json={"text": "load terrain"})
+
+    terrain_resp = client.get("/api/terrain")
+    mask_resp = client.get("/api/terrain/traversable")
+
+    assert terrain_resp.status_code == 200
+    assert mask_resp.status_code == 200
+
+    terrain = terrain_resp.json()
+    mask = mask_resp.json()
+    assert mask["shape"] == terrain["shape"]
+    assert len(mask["mask"]) == len(terrain["elevation"])
+    assert len(mask["mask"][0]) == len(terrain["elevation"][0])
 
 
 def test_post_command_terrain_info_after_load():

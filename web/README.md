@@ -16,18 +16,20 @@ The backend must be running on `http://localhost:8000` before using the terrain
 loader or mission controls. Start it from the repo root with:
 
 ```bash
-uv run uvicorn marsops.web.main:app --reload
+uv run marsops-web
 ```
 
 Then open `http://localhost:5173` in your browser.
 
-### Smoke-test without a chat panel
+### Smoke-test the current UI
 
-Use the two buttons in the top-right corner:
+Use the mission controls in the top-right corner:
 
-- **Load Terrain** — sends `load synthetic terrain` and fetches the terrain grid.
-- **Plan & Run Demo** — sends the full 4-command sequence (load, plan, inject
-  anomaly, execute) and streams rover telemetry live.
+- Pick one of the presets: **Delta Survey**, **Crater Dip**, or **Rim Patrol**.
+- Optionally inject an anomaly and choose which step it fires on.
+- Click **Run Mission** to load terrain, plan, and execute with live telemetry.
+- Use the minimap in the bottom-left to choose a custom start cell; dim cells
+  are discouraged as mission starts.
 
 ## Scripts
 

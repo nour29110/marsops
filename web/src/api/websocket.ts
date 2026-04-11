@@ -12,7 +12,8 @@ function defaultWsUrl(): string {
 export function useTelemetrySocket(wsUrl = defaultWsUrl()) {
   useEffect(() => {
     const ws = new WebSocket(wsUrl);
-    ws.onopen = () => console.log("WS connected");
+    let disposed = false;
+
     ws.onmessage = (e) => {
       try {
         const event: TelemetryEvent = JSON.parse(e.data as string);
@@ -21,8 +22,29 @@ export function useTelemetrySocket(wsUrl = defaultWsUrl()) {
         /* ignore malformed messages */
       }
     };
-    ws.onerror = (e) => console.error("WS error", e);
-    ws.onclose = () => console.log("WS closed");
-    return () => ws.close();
+    ws.onerror = () => {
+      /* connection failures are transient during local reloads / cold starts */
+    };
+    ws.onclose = () => {
+      /* silent close */
+    };
+
+    return () => {
+      disposed = true;
+      ws.onmessage = null;
+      ws.onerror = null;
+      ws.onclose = null;
+
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.close();
+        return;
+      }
+
+      if (ws.readyState === WebSocket.CONNECTING) {
+        ws.onopen = () => {
+          if (disposed) ws.close();
+        };
+      }
+    };
   }, [wsUrl]);
 }

@@ -4,9 +4,9 @@ import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import { useAppStore } from "../store";
 
-const ROVER_SCALE = 1.2;
+const ROVER_SCALE = 1.25;
 const HEIGHT_SCALE = 8;
-const Y_OFFSET = 0.7;
+const Y_OFFSET = 0.85;
 
 export const Rover = forwardRef<THREE.Group>(function Rover(_, fwdRef) {
   const terrain = useAppStore((s) => s.terrain);

@@ -1,12 +1,11 @@
 import { useAppStore, type MissionPhase } from "../store";
 
 const PHASES: { key: MissionPhase; label: string; icon: string }[] = [
-  { key: "resetting", label: "Resetting session", icon: "1" },
-  { key: "loading_terrain", label: "Loading terrain data", icon: "2" },
-  { key: "analyzing", label: "Analyzing traversability", icon: "3" },
-  { key: "planning", label: "Computing optimal route", icon: "4" },
-  { key: "injecting_anomaly", label: "Injecting anomaly", icon: "5" },
-  { key: "executing", label: "Executing mission", icon: "6" },
+  { key: "loading_terrain", label: "Loading terrain data", icon: "1" },
+  { key: "analyzing", label: "Analyzing traversability", icon: "2" },
+  { key: "planning", label: "Computing optimal route", icon: "3" },
+  { key: "injecting_anomaly", label: "Injecting anomaly", icon: "4" },
+  { key: "executing", label: "Executing mission", icon: "5" },
 ];
 
 function phaseIndex(phase: MissionPhase): number {
@@ -16,7 +15,7 @@ function phaseIndex(phase: MissionPhase): number {
 export function MissionProgress() {
   const phase = useAppStore((s) => s.missionPhase);
 
-  if (!phase) return null;
+  if (!phase || phase === "resetting") return null;
 
   const currentIdx = phaseIndex(phase);
 

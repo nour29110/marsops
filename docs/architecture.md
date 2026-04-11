@@ -75,15 +75,14 @@ The `mcp_server` module wraps the whole stack in a FastMCP server with six tools
 
 ## Claude Code sub-agents
 
-MarsOps uses seven specialized Claude Code sub-agents, each defined in `.claude/agents/`:
+MarsOps uses six specialized Claude Code sub-agents, each defined in `.claude/agents/`:
 
 1. `code-reviewer`, Sonnet, reviews diffs before commit.
 2. `test-writer`, Sonnet, writes pytest and hypothesis tests for new modules.
 3. `path-finder`, Sonnet, owns A* and cost-function code.
 4. `telemetry-analyst`, Sonnet, owns report generation.
-5. `viz-builder`, Sonnet, owns plotting code (emerged in Task 5).
-6. `mission-planner`, **Opus**, decomposes natural-language mission goals into validated waypoint plans via an iterative dry-run loop.
-7. `anomaly-handler`, **Opus**, decides recovery strategies when anomalies fire mid-mission.
+5. `mission-planner`, **Opus**, decomposes natural-language mission goals into validated waypoint plans via an iterative dry-run loop.
+6. `anomaly-handler`, **Opus**, decides recovery strategies when anomalies fire mid-mission.
 
 Only the two strategic agents run on Opus. All other work, including the main conversation thread, runs on Sonnet for token efficiency.
 

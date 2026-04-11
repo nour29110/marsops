@@ -1,6 +1,6 @@
 # MarsOps
 
-**An autonomous Mars rover mission planner you can drive in your browser, in natural language, or from Claude Desktop.**
+**An autonomous Mars rover mission planner with a 3D browser demo, REST API, and Claude Desktop MCP server.**
 
 [![CI](https://github.com/nour29110/marsops/actions/workflows/ci.yml/badge.svg)](https://github.com/nour29110/marsops/actions/workflows/ci.yml)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
@@ -31,7 +31,7 @@ Open the site, pick a mission preset — **Delta Survey** (flat delta terrain), 
 
 MarsOps is a portfolio project that explores what agentic AI engineering actually looks like in practice, using a Mars rover mission planner as the vehicle. The system loads real Jezero Crater elevation data from the USGS PDS mirror, plans rover traverses with A* over slope-weighted terrain, simulates execution on a Perseverance-inspired energy model, and recovers from mid-mission anomalies through a closed-loop replan.
 
-The entire stack is coordinated by seven Claude Code sub-agents with bounded scopes, two of them running on Opus for strategic reasoning, and the whole thing is exposed to both Claude Desktop (via a custom Model Context Protocol server) and a live 3D web UI (via a FastAPI backend with streaming telemetry over WebSocket). You can drive the rover by typing in natural language to Claude Desktop, by clicking buttons in the browser, or by curling the REST API directly.
+The entire stack is coordinated by six Claude Code sub-agents with bounded scopes, two of them running on Opus for strategic reasoning, and the whole thing is exposed to both Claude Desktop (via a custom Model Context Protocol server) and a live 3D web UI (via a FastAPI backend with streaming telemetry over WebSocket). You can drive the rover by typing in natural language to Claude Desktop, by using the preset-driven browser controls, or by curling the REST API directly.
 
 ## How you can drive the rover
 
@@ -47,16 +47,15 @@ There are three fully working entry points, in order of effort to try:
 
 See [`docs/architecture.md`](docs/architecture.md) for the full Mermaid diagram and module-by-module walk through.
 
-## The seven sub-agents
+## The six sub-agents
 
-MarsOps is coordinated by seven specialized Claude Code sub-agents, each with a bounded scope defined in `.claude/agents/`. Only the two strategic agents run on Opus, everything else is Sonnet for token efficiency.
+MarsOps is coordinated by six specialized Claude Code sub-agents, each with a bounded scope defined in `.claude/agents/`. Only the two strategic agents run on Opus, everything else is Sonnet for token efficiency.
 
 | Agent | Model | Role |
 |---|---|---|
 | `code-reviewer` | Sonnet | Reviews diffs before commit, never writes code |
 | `test-writer` | Sonnet | Writes pytest and hypothesis tests, never touches source |
 | `path-finder` | Sonnet | Owns A* and cost function code |
-| `viz-builder` | Sonnet | Owns plotting and mission playback code |
 | `telemetry-analyst` | Sonnet | Owns the markdown report generator |
 | `mission-planner` | **Opus** | Iteratively plans, dry-runs, and refines mission plans |
 | `anomaly-handler` | **Opus** | Decides recovery strategy when anomalies fire mid-mission |
@@ -101,7 +100,7 @@ npm install
 npm run dev            # Vite on http://localhost:5173
 ```
 
-Open `http://localhost:5173` and click Run Mission.
+Open `http://localhost:5173`, pick a preset, optionally inject an anomaly, and click Run Mission.
 
 **Standalone demos (no web UI needed):**
 
@@ -135,17 +134,17 @@ Both platforms auto-redeploy on every push to `main` via GitHub integration.
 - **Testing**, [pytest](https://docs.pytest.org/) with [hypothesis](https://hypothesis.readthedocs.io/) property-based tests
 - **Pre-commit**, [pre-commit](https://pre-commit.com/) running ruff and mypy
 - **CI**, GitHub Actions
-- **Agentic tooling**, [Claude Code](https://github.com/anthropics/claude-code) with seven custom sub-agents, hooks, and a project-level `CLAUDE.md`
+- **Agentic tooling**, [Claude Code](https://github.com/anthropics/claude-code) with six custom sub-agents, hooks, and a project-level `CLAUDE.md`
 - **Natural language interface**, a custom [MCP](https://modelcontextprotocol.io/) server built with the official Python SDK
 - **Web API**, [FastAPI](https://fastapi.tiangolo.com/) with a WebSocket telemetry stream
-- **Web frontend**, [React](https://react.dev/) 18, [Vite](https://vitejs.dev/), [React Three Fiber](https://r3f.docs.pmnd.rs/), [drei](https://github.com/pmndrs/drei), [zustand](https://github.com/pmndrs/zustand), [Tailwind](https://tailwindcss.com/) v3
+- **Web frontend**, [React](https://react.dev/) 19, [Vite](https://vitejs.dev/), [React Three Fiber](https://r3f.docs.pmnd.rs/), [drei](https://github.com/pmndrs/drei), [zustand](https://github.com/pmndrs/zustand), [Tailwind](https://tailwindcss.com/) v3
 - **Geospatial**, numpy, scipy, rasterio, networkx
 - **Visualization**, plotly for interactive HTML, matplotlib for static plots
 - **Deployment**, Docker, Render (backend), Vercel (frontend)
 
 ## Project status
 
-Version 0.2.0. Feature-complete through closed-loop recovery, the Claude Desktop MCP integration, and a deployed 3D web UI with live telemetry streaming. See [`docs/anomaly_recovery_trace.txt`](docs/anomaly_recovery_trace.txt) for a real captured run.
+Version 0.1.0. Feature-complete through closed-loop recovery, the Claude Desktop MCP integration, and a deployed 3D web UI with live telemetry streaming. The browser presets are tuned to demonstrate replanning and recovery, so most runs complete successfully even when anomalies are enabled. See [`docs/anomaly_recovery_trace.txt`](docs/anomaly_recovery_trace.txt) for a real captured run.
 
 ## License
 

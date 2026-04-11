@@ -4,7 +4,8 @@ import * as THREE from "three";
 import { useAppStore } from "../store";
 
 const HEIGHT_SCALE = 8;
-const PATH_Y_OFFSET = 0.7;
+const PATH_Y_OFFSET = 1.05;
+const PATH_ARC_LIFT = 0.28;
 
 export function PathLine() {
   const path = useAppStore((s) => s.path);
@@ -29,7 +30,7 @@ export function PathLine() {
     }
     const range = maxE - minE || 1;
 
-    return path.map(([row, col]) => {
+    const cellPoint = ([row, col]: [number, number]) => {
       const clampedRow = Math.max(0, Math.min(row, rows - 1));
       const clampedCol = Math.max(0, Math.min(col, cols - 1));
       const normalizedH =
@@ -39,7 +40,22 @@ export function PathLine() {
         normalizedH + PATH_Y_OFFSET,
         row - rows / 2
       );
-    });
+    };
+
+    const elevatedPoints: THREE.Vector3[] = [];
+    for (let i = 0; i < path.length; i++) {
+      const current = cellPoint(path[i]);
+      elevatedPoints.push(current);
+
+      if (i === path.length - 1) continue;
+
+      const next = cellPoint(path[i + 1]);
+      const midpoint = current.clone().lerp(next, 0.5);
+      midpoint.y = Math.max(current.y, next.y) + PATH_ARC_LIFT;
+      elevatedPoints.push(midpoint);
+    }
+
+    return elevatedPoints;
   }, [path, terrain]);
 
   if (!points || points.length < 2) return null;

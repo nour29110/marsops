@@ -10,7 +10,6 @@ import { sendCommand, fetchTerrain, fetchTraversableMask, startKeepAlive } from 
 import { useTelemetrySocket } from "./api/websocket";
 import { useAppStore } from "./store";
 import { ErrorBoundary } from "./debug/ErrorBoundary";
-import { DebugOverlay } from "./debug/DebugOverlay";
 
 const STATUS_COLORS: Record<string, string> = {
   idle: "text-gray-400",
@@ -56,18 +55,6 @@ export default function App() {
       }
     })();
     return () => { cancelled = true; };
-  }, []);
-
-  // Keyboard shortcut: Cmd/Ctrl+` toggles the debug overlay
-  useEffect(() => {
-    function handleKey(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && e.key === "`") {
-        e.preventDefault();
-        useAppStore.getState().toggleDebug();
-      }
-    }
-    window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
   }, []);
 
   return (
@@ -124,11 +111,15 @@ export default function App() {
         )}
       </div>
 
-      {/* Top-right: Mission Control + Event Log stacked */}
+      {/* Top-right: Mission Control */}
       <div className="absolute top-4 right-4 z-10 flex flex-col gap-3 items-end">
         <ErrorBoundary>
           <MissionControls />
         </ErrorBoundary>
+      </div>
+
+      {/* Left-side mission ticker, centered between telemetry and minimap */}
+      <div className="absolute left-4 top-[11rem] bottom-[14.5rem] z-10 flex items-center">
         <EventLog />
       </div>
 
@@ -160,9 +151,6 @@ export default function App() {
 
       {/* Centered: Mission complete checkmark */}
       <MissionComplete />
-
-      {/* Debug overlay — outside all error boundaries so it survives crashes */}
-      {import.meta.env.DEV && <DebugOverlay />}
     </div>
   );
 }

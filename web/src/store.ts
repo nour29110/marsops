@@ -38,6 +38,7 @@ interface AppState {
   roverHeading: number;
   batteryPct: number;
   missionStatus: "idle" | "running" | "complete" | "failed";
+  missionRecovered: boolean;
   setRoverCell: (cell: [number, number]) => void;
   cameraMode: "follow" | "free";
   setCameraMode: (m: "follow" | "free") => void;
@@ -87,6 +88,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   roverHeading: 0,
   batteryPct: 100,
   missionStatus: "idle",
+  missionRecovered: false,
   setRoverCell: (cell) => set({ roverCell: cell }),
   cameraMode: "follow",
   setCameraMode: (m) => set({ cameraMode: m }),
@@ -166,6 +168,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         patch.activeAnomaly = type;
         setTimeout(() => set({ activeAnomaly: null }), 4000);
       } else if (e.event_type === "recovery_replan") {
+        patch.missionRecovered = true;
         newEntry = makeEntry("🔁", `Recovery replan: ${e.message ?? ""}`, "warn");
       } else if (e.event_type === "mission_complete") {
         newEntry = makeEntry("✅", `Mission complete at ${posStr}`, "success");
@@ -193,6 +196,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       roverHeading: 0,
       batteryPct: 100,
       missionStatus: "idle",
+      missionRecovered: false,
       activeAnomaly: null,
       eventLog: [],
       missionStartAt: null,
