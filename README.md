@@ -20,8 +20,6 @@
 
 > The backend runs on a free tier that sleeps after 15 minutes of inactivity. The first mission you run may take 20 to 30 seconds to start while the server wakes up. Every subsequent run is instant.
 
-Open the site, pick a mission preset — **Delta Survey** (flat delta terrain), **Crater Dip** (low crater floor, 4 science stops, dust storm), or **Rim Patrol** (high crater rim, wheel-stuck risk) — and watch a Curiosity-class rover plan a route across Jezero Crater terrain, execute it in a live 3D scene, and handle anomalies along the way. No install, no signup.
-
 ![Mission playback animation](docs/demo_playback.png)
 
 <img src="docs/mcp_conversation_1.png" width="600">
