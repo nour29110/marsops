@@ -4,7 +4,7 @@ import * as THREE from "three";
 import { useAppStore } from "../store";
 
 const HEIGHT_SCALE = 8;
-const PATH_Y_OFFSET = 1.05;
+const PATH_Y_OFFSET = 0.55;
 const PATH_ARC_LIFT = 0.28;
 
 export function PathLine() {
