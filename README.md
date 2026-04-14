@@ -18,7 +18,7 @@
 
 **[marsops.vercel.app](https://marsops.vercel.app)**
 
-> The backend runs on a free tier that sleeps after 15 minutes of inactivity. The first mission you run may take 20 to 30 seconds to start while the server wakes up. Every subsequent run is instant.
+> The backend runs on an Oracle Cloud Always Free instance — no cold starts, no sleep.
 
 ![Mission playback animation](docs/demo_playback.png)
 
@@ -118,10 +118,10 @@ See [`docs/mcp_setup.md`](docs/mcp_setup.md) for the full setup. In short, start
 
 The live demo is deployed in two pieces:
 
-- **Backend on [Render](https://render.com)**, free tier, as a Docker container built from the `Dockerfile` at the repo root. Configured in [`render.yaml`](render.yaml). Sleeps after 15 minutes of inactivity, which is why the first request after a cold period takes ~30 seconds.
-- **Frontend on [Vercel](https://vercel.com)**, free tier, built from the `web/` folder with Vite. Points at the Render backend via `VITE_API_URL`.
+- **Backend on [Oracle Cloud](https://www.oracle.com/cloud/free/) Always Free** (VM.Standard.A1.Flex, 4 OCPU / 24 GB RAM), running as a Docker container behind a Caddy reverse proxy with automatic TLS. Reachable at `https://marsops-api.duckdns.org`. Always on — no cold starts.
+- **Frontend on [Vercel](https://vercel.com)**, free tier, built from the `web/` folder with Vite. Points at the Oracle backend via `VITE_API_URL`.
 
-Both platforms auto-redeploy on every push to `main` via GitHub integration.
+The frontend auto-redeploys on every push to `main` via Vercel's GitHub integration. The backend is updated by SSH-ing into the VM, pulling the latest image, and restarting the systemd service.
 
 ## Built with
 
@@ -138,7 +138,7 @@ Both platforms auto-redeploy on every push to `main` via GitHub integration.
 - **Web frontend**, [React](https://react.dev/) 19, [Vite](https://vitejs.dev/), [React Three Fiber](https://r3f.docs.pmnd.rs/), [drei](https://github.com/pmndrs/drei), [zustand](https://github.com/pmndrs/zustand), [Tailwind](https://tailwindcss.com/) v3
 - **Geospatial**, numpy, scipy, rasterio, networkx
 - **Visualization**, plotly for interactive HTML, matplotlib for static plots
-- **Deployment**, Docker, Render (backend), Vercel (frontend)
+- **Deployment**, Docker, Oracle Cloud Always Free (backend), Vercel (frontend)
 
 ## Project status
 

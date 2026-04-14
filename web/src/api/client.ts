@@ -21,50 +21,15 @@ export async function fetchTraversableMask(): Promise<{ shape: [number, number];
   return handleResponse<{ shape: [number, number]; mask: boolean[][] }>(res);
 }
 
-const KEEPALIVE_INTERVAL_MS = 4 * 60 * 1000; // 4 minutes
-let keepAliveTimer: ReturnType<typeof setInterval> | null = null;
-
-export function startKeepAlive(): () => void {
-  if (keepAliveTimer) return () => {};
-  const ping = () => {
-    fetch(`${BASE_URL}/healthz`).catch(() => {});
-  };
-  ping();
-  keepAliveTimer = setInterval(ping, KEEPALIVE_INTERVAL_MS);
-  return () => {
-    if (keepAliveTimer) {
-      clearInterval(keepAliveTimer);
-      keepAliveTimer = null;
-    }
-  };
-}
-
 async function fetchWithRetry(
   input: RequestInfo,
   init?: RequestInit,
-  retries = 3,
-  delayMs = 2000,
 ): Promise<Response> {
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    try {
-      const res = await fetch(input, init);
-      // Render returns 502 while the container is booting — retry
-      if (res.status === 502 && attempt < retries) {
-        await new Promise((r) => setTimeout(r, delayMs));
-        continue;
-      }
-      return res;
-    } catch (err) {
-      // Network error (CORS block on a 502, or container unreachable)
-      if (attempt < retries) {
-        await new Promise((r) => setTimeout(r, delayMs));
-        continue;
-      }
-      throw err;
-    }
+  const res = await fetch(input, init);
+  if (!res.ok && res.status >= 500) {
+    throw new Error(`HTTP ${res.status}`);
   }
-  // Unreachable, but satisfies TS
-  throw new Error("fetchWithRetry: exhausted retries");
+  return res;
 }
 
 export async function sendCommand(
