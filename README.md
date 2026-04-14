@@ -18,7 +18,6 @@
 
 **[marsops.vercel.app](https://marsops.vercel.app)**
 
-> The backend runs on an Oracle Cloud Always Free instance — no cold starts, no sleep.
 
 ![Mission playback animation](docs/demo_playback.png)
 
@@ -118,7 +117,7 @@ See [`docs/mcp_setup.md`](docs/mcp_setup.md) for the full setup. In short, start
 
 The live demo is deployed in two pieces:
 
-- **Backend on [Oracle Cloud](https://www.oracle.com/cloud/free/) Always Free** (VM.Standard.A1.Flex, 4 OCPU / 24 GB RAM), running as a Docker container behind a Caddy reverse proxy with automatic TLS. Reachable at `https://marsops-api.duckdns.org`. Always on — no cold starts.
+- **Backend on [Oracle Cloud](https://www.oracle.com/cloud/free/) Always Free** 
 - **Frontend on [Vercel](https://vercel.com)**, free tier, built from the `web/` folder with Vite. Points at the Oracle backend via `VITE_API_URL`.
 
 The frontend auto-redeploys on every push to `main` via Vercel's GitHub integration. The backend is updated by SSH-ing into the VM, pulling the latest image, and restarting the systemd service.
