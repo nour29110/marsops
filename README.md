@@ -22,7 +22,7 @@
 ![Mission playback animation](docs/demo_playback.png)
 
 <img src="docs/mcp_conversation_1.png" width="600">
----
+
 
 ## What this is
 
