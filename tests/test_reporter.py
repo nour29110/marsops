@@ -95,40 +95,36 @@ def test_outcome_partial() -> None:
 
 
 def test_recommendation_continue_high_battery() -> None:
-    """_recommendation returns Continue when mission succeeds with battery > 40 %."""
+    """_recommendation returns CONTINUE when mission succeeds with battery > 40 %."""
     log = _success_log(final_battery=80.0)
     rec = _recommendation(log)
-    assert "Continue" in rec
-    assert "\U0001f7e2" in rec  # 🟢
+    assert "CONTINUE" in rec
 
 
 def test_recommendation_return_low_battery_success() -> None:
-    """_recommendation returns Return to base when successful but battery 20-40 %."""
+    """_recommendation returns RETURN TO BASE when successful but battery 20-40 %."""
     log = _success_log(final_battery=30.0)
     rec = _recommendation(log)
-    assert "Return to base" in rec
-    assert "\U0001f7e1" in rec  # 🟡
+    assert "RETURN TO BASE" in rec
 
 
 def test_recommendation_abort_on_failure() -> None:
-    """_recommendation returns Abort when mission_failed event is present."""
+    """_recommendation returns ABORT when mission_failed event is present."""
     rec = _recommendation(_failure_log())
-    assert "Abort" in rec
-    assert "\U0001f534" in rec  # 🔴
+    assert "ABORT" in rec
 
 
 def test_recommendation_abort_critical_battery() -> None:
-    """_recommendation returns Abort when battery is critically low (< 20 %)."""
+    """_recommendation returns ABORT when battery is critically low (< 20 %)."""
     log = _success_log(final_battery=10.0)
     rec = _recommendation(log)
-    assert "Abort" in rec
-    assert "\U0001f534" in rec  # 🔴
+    assert "ABORT" in rec
 
 
 def test_recommendation_return_partial() -> None:
-    """_recommendation returns Return to base when mission is partial."""
+    """_recommendation returns RETURN TO BASE when mission is partial."""
     rec = _recommendation(_partial_log())
-    assert "Return to base" in rec
+    assert "RETURN TO BASE" in rec
 
 
 # ---------------------------------------------------------------------------
