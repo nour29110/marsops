@@ -71,8 +71,12 @@ const PRESETS: MissionPreset[] = [
   {
     id: "delta_survey",
     label: "Delta Survey",
-    description: "Short traverse across flat, low-elevation delta terrain",
-    start: [10, 10],
+    // NW quadrant — the synthetic terrain places the river delta ramp here.
+    // (12,12) keeps us inside the delta zone while staying clear of the grid edge,
+    // where the traversable-mask radius filter can thin out usable neighbours.
+    // Keywords "delta flat" tell the planner to pick flat, low-delta-elevation cells.
+    description: "Flat delta terrain in the NW sector, 2 stops, no anomaly",
+    start: [12, 12],
     waypoints: 2,
     keywords: "delta flat",
     defaultAnomaly: "none",
@@ -81,18 +85,23 @@ const PRESETS: MissionPreset[] = [
   {
     id: "crater_dip",
     label: "Crater Dip",
-    description: "Descent into low crater terrain with four science stops",
-    start: [15, 15],
+    // Grid centre (50,50) sits at the Gaussian crater depression — lowest elevation.
+    // Keyword "low" biases waypoints toward the crater floor cells.
+    description: "Descent to the crater floor, 4 science stops, dust storm",
+    start: [50, 50],
     waypoints: 4,
     keywords: "low",
     defaultAnomaly: "dust storm",
-    defaultAnomalyStep: 4,
+    defaultAnomalyStep: 3,
   },
   {
     id: "rim_patrol",
     label: "Rim Patrol",
-    description: "Traverse along the high-elevation crater rim",
-    start: [12, 8],
+    // Top-right corner is far from the NW delta and the crater depression,
+    // sitting on the higher-elevation outer terrain.
+    // Keyword "high" selects cells above median + 1 std dev in elevation.
+    description: "High-elevation rim traverse in the NE sector, 3 stops, wheel stuck",
+    start: [5, 85],
     waypoints: 3,
     keywords: "high",
     defaultAnomaly: "wheel stuck",
@@ -108,8 +117,9 @@ export function MissionControls() {
   const loading = useAppStore((s) => s.loading);
   const missionStatus = useAppStore((s) => s.missionStatus);
   const [selectedPresetId, setSelectedPresetId] = useState(PRESETS[0].id);
-  const [anomaly, setAnomaly] = useState<AnomalyType>("dust storm");
-  const [anomalyStep, setAnomalyStep] = useState(3);
+  // Initialize from the first preset's defaults — not hardcoded.
+  const [anomaly, setAnomaly] = useState<AnomalyType>(PRESETS[0].defaultAnomaly);
+  const [anomalyStep, setAnomalyStep] = useState(PRESETS[0].defaultAnomalyStep);
 
   const disabled = loading || missionStatus === "running";
   const preset = PRESETS.find((p) => p.id === selectedPresetId)!;
@@ -164,6 +174,16 @@ export function MissionControls() {
         const resp = await sendCommand(planText);
         const r = (resp as { parsed: unknown; result: MissionPlanResult })
           .result as MissionPlanResult;
+
+        // Surface the dry-run refinement reasoning to the event log so the user
+        // can see how many iterations the planner ran and what battery it predicted.
+        if (r?.reasoning) {
+          store.pushLogEntry({
+            icon: "🔍",
+            text: r.reasoning,
+            severity: "info",
+          });
+        }
 
         const realWps = (r?.waypoints ?? []).filter(
           ([wr, wc]) => wr !== currentStart[0] || wc !== currentStart[1],

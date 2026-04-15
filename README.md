@@ -131,7 +131,7 @@ The frontend auto-redeploys on every push to `main` via Vercel's GitHub integrat
 - **Testing**, [pytest](https://docs.pytest.org/) with [hypothesis](https://hypothesis.readthedocs.io/) property-based tests
 - **Pre-commit**, [pre-commit](https://pre-commit.com/) running ruff and mypy
 - **CI**, GitHub Actions
-- **Agentic tooling**, [Claude Code](https://github.com/anthropics/claude-code) with six custom sub-agents, hooks, and a project-level `CLAUDE.md`
+- **Agentic tooling**, [Claude Code](https://github.com/anthropics/claude-code) with six custom sub-agents, hooks, and a project-level
 - **Natural language interface**, a custom [MCP](https://modelcontextprotocol.io/) server built with the official Python SDK
 - **Web API**, [FastAPI](https://fastapi.tiangolo.com/) with a WebSocket telemetry stream
 - **Web frontend**, [React](https://react.dev/) 19, [Vite](https://vitejs.dev/), [React Three Fiber](https://r3f.docs.pmnd.rs/), [drei](https://github.com/pmndrs/drei), [zustand](https://github.com/pmndrs/zustand), [Tailwind](https://tailwindcss.com/) v3

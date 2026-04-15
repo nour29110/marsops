@@ -46,7 +46,7 @@ export function EventLog() {
         return (
           <div
             key={entry.id}
-            className={`flex items-start gap-2 text-[11px] animate-log-enter w-full rounded-lg bg-black/38 backdrop-blur-sm border border-white/8 px-2.5 py-1.5 ${colorCls}`}
+            className={`flex items-start gap-2 text-[11px] animate-log-enter w-full rounded-lg bg-black/40 backdrop-blur-sm border border-white/10 px-2.5 py-1.5 ${colorCls}`}
             style={{
               filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.8))",
               opacity,

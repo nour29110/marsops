@@ -63,6 +63,13 @@ interface AppState {
   pushDebug: (entry: Omit<DebugEntry, "id" | "timestamp">) => void;
   clearDebug: () => void;
   toggleDebug: () => void;
+  // Report viewer
+  reportOpen: boolean;
+  reportContent: string | null;
+  reportLoading: boolean;
+  setReportOpen: (open: boolean) => void;
+  setReportContent: (content: string | null) => void;
+  setReportLoading: (loading: boolean) => void;
 }
 
 function makeEntry(
@@ -125,6 +132,13 @@ export const useAppStore = create<AppState>((set, get) => ({
     }),
   clearDebug: () => set({ debugLog: [] }),
   toggleDebug: () => set((state) => ({ debugOpen: !state.debugOpen })),
+  // Report viewer
+  reportOpen: false,
+  reportContent: null,
+  reportLoading: false,
+  setReportOpen: (open) => set({ reportOpen: open }),
+  setReportContent: (content) => set({ reportContent: content }),
+  setReportLoading: (loading) => set({ reportLoading: loading }),
   applyTelemetry: (e) => {
     set((state) => {
       const patch: Partial<AppState> = {};
@@ -201,5 +215,8 @@ export const useAppStore = create<AppState>((set, get) => ({
       eventLog: [],
       missionStartAt: null,
       missionPhase: null,
+      reportOpen: false,
+      reportContent: null,
+      reportLoading: false,
     }),
 }));

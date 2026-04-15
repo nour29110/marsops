@@ -389,7 +389,9 @@ def _execute_mission() -> dict[str, Any]:
         timestamp = datetime.now(tz=UTC).strftime("%Y%m%dT%H%M%SZ")
         report_path = _OUTPUT_DIR / f"mcp_mission_{timestamp}.md"
         terrain_name = terrain.metadata.name
-        generate_mission_report(log, terrain_name, report_path)
+        generate_mission_report(
+            log, terrain_name, report_path, planned_waypoints=len(plan.waypoints)
+        )
         session.last_report_path = report_path
 
         recovery_count = sum(1 for e in log.events if e.event_type == "recovery_replan")

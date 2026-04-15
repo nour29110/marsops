@@ -6,6 +6,7 @@ import { AnomalyBanner } from "./ui/AnomalyBanner";
 import { TerrainMinimap } from "./ui/TerrainMinimap";
 import { CameraToggle } from "./ui/CameraToggle";
 import { MissionComplete } from "./ui/MissionComplete";
+import { ReportModal } from "./ui/ReportModal";
 import { sendCommand, fetchTerrain, fetchTraversableMask } from "./api/client";
 import { useTelemetrySocket } from "./api/websocket";
 import { useAppStore } from "./store";
@@ -18,6 +19,37 @@ const STATUS_COLORS: Record<string, string> = {
   failed: "text-red-400",
 };
 
+function ReportBanner({
+  status,
+  onView,
+}: {
+  status: "complete" | "failed";
+  onView: () => void;
+}) {
+  const isComplete = status === "complete";
+  return (
+    <div
+      className={`flex items-center gap-2 px-3 py-2 rounded border text-xs font-medium ${
+        isComplete
+          ? "border-green-500/40 bg-green-900/30 text-green-300"
+          : "border-red-500/40 bg-red-900/30 text-red-300"
+      }`}
+    >
+      <span>{isComplete ? "✓ Report ready" : "✕ Mission failed — report available"}</span>
+      <button
+        onClick={onView}
+        className={`ml-auto px-2 py-0.5 rounded border text-[11px] transition-colors ${
+          isComplete
+            ? "border-green-500/50 hover:bg-green-800/50 text-green-200"
+            : "border-red-500/50 hover:bg-red-800/50 text-red-200"
+        }`}
+      >
+        View
+      </button>
+    </div>
+  );
+}
+
 export default function App() {
   const terrain = useAppStore((s) => s.terrain);
   const customStart = useAppStore((s) => s.customStart);
@@ -28,6 +60,28 @@ export default function App() {
   const missionStatus = useAppStore((s) => s.missionStatus);
 
   useTelemetrySocket();
+
+  function handleViewReport() {
+    const store = useAppStore.getState();
+    store.setReportLoading(true);
+    store.setReportOpen(true);
+    sendCommand("report")
+      .then((resp) => {
+        const r = (
+          resp as {
+            parsed: unknown;
+            result: { status: string; markdown?: string; message?: string };
+          }
+        ).result;
+        store.setReportContent(r.markdown ?? r.message ?? "No report content.");
+      })
+      .catch(() => {
+        store.setReportContent("Failed to load report from the server.");
+      })
+      .finally(() => {
+        store.setReportLoading(false);
+      });
+  }
 
   // Proactively initialize terrain on mount
   useEffect(() => {
@@ -115,9 +169,12 @@ export default function App() {
         </ErrorBoundary>
       </div>
 
-      {/* Left-side mission ticker, centered between telemetry and minimap */}
-      <div className="absolute left-4 top-[11rem] bottom-[14.5rem] z-10 flex items-center">
+      {/* Left-side: event log + report banner */}
+      <div className="absolute left-4 top-[11rem] bottom-[14.5rem] z-10 flex flex-col justify-center gap-3 items-start">
         <EventLog />
+        {(missionStatus === "complete" || missionStatus === "failed") && (
+          <ReportBanner status={missionStatus} onView={handleViewReport} />
+        )}
       </div>
 
       {/* Bottom-left: Terrain minimap for picking a custom start cell */}
@@ -148,6 +205,9 @@ export default function App() {
 
       {/* Centered: Mission complete checkmark */}
       <MissionComplete />
+
+      {/* Report viewer modal — sits above everything else */}
+      <ReportModal />
     </div>
   );
 }

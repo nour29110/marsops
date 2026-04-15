@@ -1,4 +1,4 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { useAppStore } from "../store";
 
 export function TerrainMinimap() {
@@ -7,6 +7,13 @@ export function TerrainMinimap() {
   const customStart = useAppStore((s) => s.customStart);
   const setCustomStart = useAppStore((s) => s.setCustomStart);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  // "blocked" drives the red-border flash + inline message on a rejected click.
+  const [blocked, setBlocked] = useState<string | null>(null);
+
+  function flashBlocked(reason: string) {
+    setBlocked(reason);
+    setTimeout(() => setBlocked(null), 1400);
+  }
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -106,12 +113,15 @@ export function TerrainMinimap() {
     const col = Math.max(0, Math.min(cols - 1, Math.floor((x / rect.width) * cols)));
     const row = Math.max(0, Math.min(rows - 1, Math.floor((y / rect.height) * rows)));
 
-    if (mask && mask[row] && !mask[row][col]) {
-      useAppStore.getState().pushLogEntry({
-        icon: "🚫",
-        text: `Cell (${row},${col}) is not recommended as a mission start`,
-        severity: "warn",
-      });
+    // Mask not ready yet — traversability analysis is still loading
+    if (!mask) {
+      flashBlocked("Terrain analysis loading…");
+      return;
+    }
+
+    // Cell is in the mask but flagged as not a good start (too steep / isolated)
+    if (!mask[row]?.[col]) {
+      flashBlocked("Too steep — pick a lighter area");
       return;
     }
 
@@ -119,14 +129,24 @@ export function TerrainMinimap() {
   };
 
   return (
-    <div>
+    <div className="relative">
       <canvas
         ref={canvasRef}
         width={160}
         height={160}
-        className="cursor-crosshair rounded border border-white/20 block"
+        className={`cursor-crosshair rounded block transition-[border-color,box-shadow] duration-150 ${
+          blocked !== null
+            ? "border border-red-500 shadow-[0_0_0_2px_rgba(239,68,68,0.35)]"
+            : "border border-white/20"
+        }`}
         onClick={handleClick}
       />
+      {/* Inline rejection message — appears directly below the canvas */}
+      {blocked !== null && (
+        <div className="absolute left-0 right-0 -bottom-5 text-center text-[9px] text-red-400 font-medium animate-pulse pointer-events-none">
+          {blocked}
+        </div>
+      )}
     </div>
   );
 }

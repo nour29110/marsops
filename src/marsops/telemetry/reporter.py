@@ -2,7 +2,7 @@
 
 Consumes a :class:`~marsops.telemetry.events.MissionLog` and writes a
 structured Markdown mission debrief to a file.  Every figure in the report
-is derived from the telemetry event list — no values are fabricated.
+is derived from the telemetry event list,no values are fabricated.
 """
 
 from __future__ import annotations
@@ -22,6 +22,8 @@ _NOTABLE_TYPES = {
     "mission_start",
     "waypoint_reached",
     "low_battery",
+    "anomaly",
+    "recovery_replan",
     "mission_complete",
     "mission_failed",
 }
@@ -57,24 +59,23 @@ def _recommendation(log: MissionLog) -> str:
     battery = log.final_battery()
 
     if outcome == "failure" or battery < 20.0:
-        return "🔴 **Abort** — mission failed or battery critically low; suspend operations."
+        return "ABORT,mission failed or battery critically low; suspend operations."
     if battery < 40.0 or outcome == "partial":
         return (
-            "🟡 **Return to base** — battery below 40 % or mission only partially completed;"
+            "RETURN TO BASE,battery below 40% or mission only partially completed;"
             " navigate to nearest charging station."
         )
-    return (
-        "🟢 **Continue** — mission succeeded with adequate battery reserve;"
-        " proceed to next objective."
-    )
+    return "CONTINUE,mission succeeded with adequate battery reserve; proceed to next objective."
 
 
-def _build_report(log: MissionLog, terrain_name: str) -> str:
+def _build_report(log: MissionLog, terrain_name: str, planned_waypoints: int) -> str:
     """Assemble the full sol-report markdown string.
 
     Args:
         log: Populated mission log.
         terrain_name: Human-readable name of the terrain dataset.
+        planned_waypoints: Number of waypoints in the executed plan, used as
+            the denominator in the waypoints-reached metric.
 
     Returns:
         Complete report as a markdown string.
@@ -90,29 +91,34 @@ def _build_report(log: MissionLog, terrain_name: str) -> str:
     duration = log.duration_s()
     distance = log.distance_cells()
     wps_reached = log.waypoints_reached()
-
-    # Count total waypoint_reached events for denominator context
-    wps_total = wps_reached  # we only know what was reached; planned count unknown here
+    wps_total = max(planned_waypoints, wps_reached)
 
     start_pos = start_event.position if start_event else (0, 0)
     end_pos = end_event.position if end_event else (0, 0)
 
-    # -- Mission Summary -----------------------------------------------------
+    recovery_count = sum(1 for e in log.events if e.event_type == "recovery_replan")
+
+    # ,Mission Summary -----------------------------------------------------
     summary = (
         f"The rover executed a traverse mission on terrain **{terrain_name}**, "
-        f"starting at grid position {start_pos} and finishing at {end_pos}.  "
-        f"Mission outcome: **{outcome}**.  "
+        f"starting at grid position {start_pos} and finishing at {end_pos}. "
+        f"Mission outcome: **{outcome}**. "
         f"The rover covered {distance} cell(s) in {duration:.2f} s, "
-        f"consuming {start_battery - end_battery:.2f} percentage points of battery capacity.  "
+        f"consuming {start_battery - end_battery:.2f} percentage points of battery capacity. "
     )
     if outcome == "failure":
         summary += "A mission-failed event was recorded; the rover halted before reaching the goal."
+    elif outcome == "success" and recovery_count > 0:
+        summary += (
+            f"All objectives were completed after **{recovery_count} recovery action(s)**; "
+            "the rover adapted its route in response to an anomaly."
+        )
     elif outcome == "success":
         summary += "All objectives were completed and the rover reached the designated goal."
     else:
         summary += "The mission ended without a completion event; log may be truncated."
 
-    # -- Key Metrics table ---------------------------------------------------
+    # ,Key Metrics table ---------------------------------------------------
     metrics = (
         "| Metric | Value |\n"
         "|--------|-------|\n"
@@ -121,9 +127,10 @@ def _build_report(log: MissionLog, terrain_name: str) -> str:
         f"| Start battery | {start_battery:.2f} % |\n"
         f"| End battery | {end_battery:.2f} % |\n"
         f"| Waypoints reached | {wps_reached} / {wps_total} |\n"
+        f"| Recovery actions | {recovery_count} |\n"
     )
 
-    # -- Timeline of Notable Events -----------------------------------------
+    # ,Timeline of Notable Events -----------------------------------------
     timeline_rows: list[str] = []
     low_battery_seen = False
     for event in log.events:
@@ -150,8 +157,12 @@ def _build_report(log: MissionLog, terrain_name: str) -> str:
     )
     timeline = timeline_header + "\n".join(timeline_rows)
 
-    # -- Anomalies -----------------------------------------------------------
-    anomaly_events = [e for e in log.events if e.event_type in {"low_battery", "mission_failed"}]
+    # ,Anomalies -----------------------------------------------------------
+    anomaly_events = [
+        e
+        for e in log.events
+        if e.event_type in {"anomaly", "recovery_replan", "low_battery", "mission_failed"}
+    ]
     if anomaly_events:
         anomaly_lines = [
             f"- **{e.event_type}** at t={e.timestamp_s:.2f} s, "
@@ -162,10 +173,10 @@ def _build_report(log: MissionLog, terrain_name: str) -> str:
     else:
         anomalies = "No anomalies detected."
 
-    # -- Recommendation -------------------------------------------------------
+    # ,Recommendation -------------------------------------------------------
     recommendation = _recommendation(log)
 
-    # -- Assemble -----------------------------------------------------------
+    # ,Assemble -----------------------------------------------------------
     report = (
         "# Mission Report\n\n"
         "## Mission Summary\n\n"
@@ -191,6 +202,7 @@ def generate_mission_report(
     log: MissionLog,
     terrain_name: str,
     output_path: Path,
+    planned_waypoints: int = 0,
 ) -> Path:
     """Generate a sol-report-style Markdown mission debrief from a MissionLog.
 
@@ -205,6 +217,9 @@ def generate_mission_report(
             mission summary paragraph.
         output_path: Destination ``.md`` file path.  Parent directories are
             created automatically.
+        planned_waypoints: Number of waypoints in the executed plan.  Used as
+            the denominator in the waypoints-reached metric.  Defaults to 0,
+            which causes the denominator to equal the reached count.
 
     Returns:
         The resolved *output_path* after writing.
@@ -212,7 +227,7 @@ def generate_mission_report(
     output_path = output_path.resolve()
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    report = _build_report(log, terrain_name)
+    report = _build_report(log, terrain_name, planned_waypoints)
     output_path.write_text(report, encoding="utf-8")
 
     logger.info(
