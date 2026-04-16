@@ -311,9 +311,6 @@ export function MissionControls() {
               disabled={disabled}
               className={INPUT_CLS}
             />
-            <div className="text-[10px] text-gray-500 mt-1">
-              Step where the anomaly fires (0–20). Most missions are 5–15 steps.
-            </div>
           </div>
         )}
       </div>
