@@ -195,9 +195,26 @@ export default function App() {
         </div>
       )}
 
-      {/* Bottom-right: Camera mode toggle */}
-      <div className="absolute bottom-4 right-4 z-10">
+      {/* Top-center: Camera mode toggle */}
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10">
         <CameraToggle />
+      </div>
+
+      {/* Bottom-right: Guide link */}
+      <div className="absolute bottom-4 right-4 z-10">
+        <a
+          href="https://github.com/nour29110/marsops/blob/main/GUIDE.md"
+          target="_blank"
+          rel="noopener noreferrer"
+          title="How it works — algorithms, math & architecture"
+          className="flex items-center justify-center w-9 h-9 rounded-full bg-black/60 backdrop-blur-sm border border-white/10 text-gray-400 hover:text-white hover:border-orange-500/50 transition-colors"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+            <circle cx="12" cy="12" r="10" />
+            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+            <line x1="12" y1="17" x2="12.01" y2="17" />
+          </svg>
+        </a>
       </div>
 
       {/* Centered: Anomaly banner (wheel/thermal only) */}

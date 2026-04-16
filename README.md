@@ -44,7 +44,7 @@ There are three fully working entry points, in order of effort to try:
 
 See [`docs/architecture.md`](docs/architecture.md) for the full Mermaid diagram and module-by-module walk through.
 
-For a deep dive into the algorithms, math, and engineering decisions behind the system — A*, cost functions, rover physics, recovery logic, and more — see [`GUIDE.md`](GUIDE.md).
+For a deep dive into the algorithms, math, and engineering decisions behind the system: A*, cost functions, rover physics, recovery logic, and more, see ➡️ [`GUIDE.md`](GUIDE.md).
 
 ## The six sub-agents
 
