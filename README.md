@@ -44,6 +44,8 @@ There are three fully working entry points, in order of effort to try:
 
 See [`docs/architecture.md`](docs/architecture.md) for the full Mermaid diagram and module-by-module walk through.
 
+For a deep dive into the algorithms, math, and engineering decisions behind the system — A*, cost functions, rover physics, recovery logic, and more — see [`GUIDE.md`](GUIDE.md).
+
 ## The six sub-agents
 
 MarsOps is coordinated by six specialized Claude Code sub-agents, each with a bounded scope defined in `.claude/agents/`. Only the two strategic agents run on Opus, everything else is Sonnet for token efficiency.
